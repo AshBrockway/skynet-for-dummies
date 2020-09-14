@@ -9,10 +9,10 @@ Each row will be filled by calling the proposed function. This row will look lik
 
 """
 To do
-1. Summarize code into a function that can be called in iterative generation of the data (or change the current code to improve efficiency)
+1. Summarize code into a function that can be called in iterative generation of the data (or change the current code to improve efficiency) DONE
 2. Create sample of 100 jobs
-    a. the biggest problem to address is to balance the 80% 20% ratio for short and long jobs
-    b. consider the data types of the rows themselves as well as how the finished data frame can be created for each sample of job rows
+    a. the biggest problem to address is to balance the 80% 20% ratio for short and long jobs DONE
+    b. consider the data types of the rows themselves as well as how the finished data frame can be created for each sample of job rows DONE
 """
 import random
 import numpy as np
