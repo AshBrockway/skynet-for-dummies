@@ -47,6 +47,7 @@ class JobGrabber:
         self.long_time = lt_prop # proportion of "long jobs"
         self.short_time = 1 - lt_prop # proportion of "short jobs"
 
+
         # get list of resource names
         self.res_list = resource_list
 
