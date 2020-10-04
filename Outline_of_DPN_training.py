@@ -50,27 +50,6 @@ def curried_valuation(length_of_longest_trajectory):
     return valuation
 
 
-def randomly_selected_action(probs):
-    '''
-    Given a set of output probabilities corresponding to actions (or jobs to schedule):
-
-    Randomly select one action with the described probabilities.
-
-    Output the index of the job to schedule and the probability that we chose that action.
-
-    For large probability lists, we might choose the final probability less than we expect due to floating point arithmetic problems.
-    '''
-    action_number = random.uniform(0,1)
-    index = 0
-    lower = 0
-    upper = probs[index]
-    while not (lower <= action_number and action_number <= upper):
-        index += 1
-        lower += upper
-        upper += probs[index]
-    return index, probs[index]
-
-
 class DPN:#(keras_module or whatever):
     def __init(self)__:
         #Super(self, __init__) #Initialize base methods of keras NN module stuff?
