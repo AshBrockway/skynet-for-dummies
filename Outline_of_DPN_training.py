@@ -43,7 +43,6 @@ def curried_valuation(length_of_longest_trajectory):
             #If the episode isn't as long as the longest trajectory, pad it
             episode.extend([(0,0,0) for x in range(length_of_longest_trajectory-x)]) #have to make sure the numbers line up correctly
         # TODO (@andrew)
-        # TODO
         #compute valuation with the episode/trajectory after it's been padded. There could be something clever here.
         out = np.array([valuation for valuation in range(length_of_longest_trajectory)])
         #out = do_the_thing(episode)
