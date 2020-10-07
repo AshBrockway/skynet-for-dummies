@@ -62,6 +62,7 @@ This file will take parameters from other classes and export them to a postgres 
     Explanation - this is the string method to define what we will see when we want to print job class
 
 
+
 #### In data_generator.py file:
 
 (none currently)
@@ -76,6 +77,7 @@ This file will take parameters from other classes and export them to a postgres 
 
 1. TODO - curried_valuation.valuation() - (@andrew)
 
+
     Explanation - compute valuation with the episode/trajectory after it's been padded. Result intended to be used as
     map(valuation, episodes_array) to return valuation of each episodes.
 
@@ -86,6 +88,7 @@ This file will take parameters from other classes and export them to a postgres 
 3. <s>TODO - DPN.train_on_jobs()</s> - (@justin)
 
     <s>Explanation - Figured out how to update the gradient sum based on the policy chosen with the relativized reward. Moreover, figured out how to update the weights of the network after summing the relativized gradient updates. </s>
+
 
 
 ### Long-term task list (Not necessary for basic model as of 10/4/2020)
