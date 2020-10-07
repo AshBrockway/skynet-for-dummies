@@ -14,8 +14,8 @@ Most important is the train_on_jobs method for updating the weights of the netwo
 
 import numpy as np
 from random
-
-
+from torch.distributions import Categorical
+from torch import optim
 
 
 ITERATIONS = 1000 #kinda like epochs?
@@ -50,27 +50,6 @@ def curried_valuation(length_of_longest_trajectory):
     return valuation
 
 
-def randomly_selected_action(probs):
-    '''
-    Given a set of output probabilities corresponding to actions (or jobs to schedule):
-
-    Randomly select one action with the described probabilities.
-
-    Output the index of the job to schedule and the probability that we chose that action.
-
-    For large probability lists, we might choose the final probability less than we expect due to floating point arithmetic problems.
-    '''
-    action_number = random.uniform(0,1)
-    index = 0
-    lower = 0
-    upper = probs[index]
-    while not (lower <= action_number and action_number <= upper):
-        index += 1
-        lower += upper
-        upper += probs[index]
-    return index, probs[index]
-
-
 class DPN:#(keras_module or whatever):
     def __init(self)__:
         #Super(self, __init__) #Initialize base methods of keras NN module stuff?
@@ -90,37 +69,50 @@ class DPN:#(keras_module or whatever):
         self.prob_history = {} #Might be a dumb idea, but it stores the probability that the network chose the action given the state?
                                # key looks like (state, action) value is the probability? marked with optional1
     def train(self, ITERATIONS):
+        '''
+        Might need to be moved outside model definition due to how pytorch works????
+
+        Defines optimizer which takes steps to update our model weights. Can start with them all at 0.
+        Loops through each iteration, makes a new set of jobs after constructing the resource constraints and time from the environment.
+        Then does a training iteration on those jobs.
+        '''
+        #Let's consider a different optimizer, but this is just proof of concept. When you define a NN in pytorch, the class inherits a parameters method that's supplied to the optimizer. Hence next comment:
+        optimizer = optim.Adam(self.model.parameters(), lr=1e-3) #This kind of definition might actually have to be defined outside of our model class. TODO 1/2: split model definition from training functions. Half for readability, half to work???
         for i in range(ITERATIONS):
             resource_constraints, time = self.env.generate_random_jobs()
             jobs = self.env.make_starting_states(resource_constraints, time) #this would be a list of starting states
-            self.train_on_jobs(jobs)
+            self.train_on_jobs(jobs, optimizer)
 
     def predict(self, state):
         '''
         The forward pass of the network on the given state. Returns the output probabilites for taking the OUTPUT_SIZE probabilites
 
         might already be defined from the initialization after defining your model
+
+        TODO: Rename to forward(self, state), and output appropriate pytorch SHIT
         '''
         pass
 
 
-    def trajectory(self, current_state, output_history = []):
+    def trajectory(self, current_state, refresh_defaults = True, output_history = []):
         '''
         Maybe this implementation doesn't utilize GPUs very well, but I have no clue or not.
 
         Final output looks like:
         [(s_0, a_0, r_0), ..., (s_L, a_L, r_l)]
         '''
-        probs = self.model.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
-        picked_action, choice_prob = randomly_selected_action(probs) #returns index of the action/job selected.
-        self.prob_history[(current_state, picked_action)] = choice_prob #optional1
+        if refresh_defaults:
+            output_history = []
+        probs = self.forward(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
+        picked_action = Categorical(probs).sample() #returns index of the action/job selected.
+        #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
         new_state, reward = self.env.state_and_reward(current_state, picked_action) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
         output_history.append( (current_state, picked_action, reward) )
         if new_state is None: #essentially, you died or finished your trajectory
             return output_history
-        return  self.trajectory(new_state, output_history)
+        return  self.trajectory(new_state, False, output_history)
 
-    def train_on_jobs(self,jobset):
+    def train_on_jobs(self,jobset, optimizer):
         '''
         Training from a batch. Kinda presume the batch is a set of starting states not sure how you have the implemented states (do they include actions internally?)
 
@@ -131,7 +123,7 @@ class DPN:#(keras_module or whatever):
         [1, 2, 3]
         ]
         '''
-        delta = np.zeros(len(self.weights), shape = self.weights.shape) #Basically start gradient or how you'll change weights out at 0 but with the shape or whatever you need to update the weights through addition. TODO figure out how this thing should look
+        optimizer.zero_grad() #This sets the optimizer to update the weights by 0. We'll add to it over time! TODO: Check that it actually works
         for job_start in jobset:
             #episode_array is going to be an array of length N containing trajectories [(s_0, a_0, r_0), ..., (s_L, a_L, r_0)]
             episode_array = [self.trajectory(job_start) for x in range(EPISODES)]
@@ -147,9 +139,12 @@ class DPN:#(keras_module or whatever):
                         state, action, reward = episodes_array[i][t]
                     except IndexError: #this occurs when the trajectory died
                         break
-                    #first two products are scalars, final is scalar multiplication of computed gradients on the NN
-                    #TODO figure out the shape or how to access the DPN's gradient thingy?
-                    #TODO GRADIENT HOW DO???
-                    delta += (cum_values[i][t]-baseline_array[t])*ALPHA*
-                                self.gradient( Math.log( self.prob_history[(state, action)] ) ) #this might not even make sense in implementation
-        self.weights = self.weights + delta
+                    #get probabilities from the network. We already did this, but pretty sure we gotta do it again.
+                    probs = self.forward(state)
+                    DPN_Theta = Categorical(probs) #Pytorch distribution for Categorical classes. SHOULD connect to the network to update weights.
+                    if i == 0 and t == 0: #Define the first loss in the sum
+                        loss = -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action)
+                    else: #Keep adding to the loss
+                        loss += -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action) #This is what it _should_ look like in pytorch. Added negative (trying to maximize reward, but we're trying to find a minimum) on recommendation of pytorch documentation: https://pytorch.org/docs/stable/distributions.html
+        loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
+        optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
