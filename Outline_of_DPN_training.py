@@ -38,14 +38,17 @@ def curried_valuation(length_of_longest_trajectory):
         input: [(s_0, a_0, r_0), ... ,(s_t, a_t, r_t)]         potentially t<L
         output: [v_0, v_1, ... v_L]
         '''
-        x = len(episode)
-        if x != length_of_longest_trajectory:
+
+        length = len(episode)
+        if length != length_of_longest_trajectory:
             #If the episode isn't as long as the longest trajectory, pad it
-            episode.extend([(0,0,0) for x in range(length_of_longest_trajectory-x)]) #have to make sure the numbers line up correctly
-        # TODO (@andrew)
-        #compute valuation with the episode/trajectory after it's been padded. There could be something clever here.
-        out = np.array([valuation for valuation in range(length_of_longest_trajectory)])
-        #out = do_the_thing(episode)
+            episode.extend([(0,0,0) for y in range(length_of_longest_trajectory-length)]) #have to make sure the numbers line up correctly
+        out = np.zeros(len(episode))
+        x = [i[2] for i in episode] #rewards
+        out[-1] = x[-1]
+        for i in reversed(range(len(x)-1)): #go backwards
+            out[i] = x[i] + gamma*out[i+1] #this step valuation = reward + gamma*next_step_valuation
+        assert x.ndim >= 1
         return out
     return valuation
 
