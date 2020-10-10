@@ -60,14 +60,14 @@ class JobGrabber:
         # For set_num iterations:
         for i in range(set_num):
             # randomly choose one of the resources to be dominant
-            dom_res = rand.sample(self.res_list, 1)
+            dom_ress = rand.sample(self.res_list, 1)
             # on the condition that we are grabbing the proportion of short jobs
             if i <= ((set_num * self.short_time) - 1):
                 # Calls an object of the Job class defined below, as a short job with the given dom. res
-                job_ob = Job(False, dom_res, self.res_list)
+                job_ob = Job(False, dom_ress, self.res_list)
             # then for any long jobs
             else:
-                job_ob = Job(True, dom_res, self.res_list)
+                job_ob = Job(True, dom_ress, self.res_list)
 
             # then for each job fill the jobs and the job_info list
             jobs[i] = job_ob.job_info
@@ -102,7 +102,7 @@ class Job:
         # enumerating the resource list, we check for whether the resource was chosen as dominant
         # # and then sample that resources usage
         for index, res in enumerate(res_list):
-            if res==dom_res:
+            if res==dom_res[0]:
                 res_vec[index] = float(np.random.uniform(low=.25, high=.5, size=1))
                 # concat. strings to make a "this resource is dominant" entry in the log
                 self.job_data[index] = res + " is dominant"
@@ -112,11 +112,11 @@ class Job:
 
         # Check the duration label for the given job
         if loonggg==True:
-            job_duration = float(np.random.uniform(low=10, high = 15, size = 1))
+            job_duration = float(np.random.randint(low=10, high = 15, size = 1))
             # store the label in the log
             self.job_data.append("Long Job")
         else:
-            job_duration = float(np.random.uniform(low=1, high=3, size = 1))
+            job_duration = float(np.random.randint(low=1, high=3, size = 1))
             self.job_data.append("Short Job")
 
         # create the resource vector for the job
@@ -127,6 +127,7 @@ class Job:
 
 
 # for testing
-# job_0b = JobGrabber(.2, ["cpu", "gpu"])
+job_0b = JobGrabber(.2, ["cpu", "gpu"])
 
-# jobs, info = job_0b.getJobs(10)
+jobs, info = job_0b.getJobs(10)
+
