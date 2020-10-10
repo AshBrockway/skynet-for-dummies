@@ -26,6 +26,7 @@ Because of the job method including that the set be 20% long time duration and 8
 
 import numpy as np
 import random as rand
+from sklearn.utils import shuffle
 
 
 class JobGrabber:
@@ -74,8 +75,8 @@ class JobGrabber:
             jobs_info[i] = job_ob.job_data
 
         # shuffle the jobs so that their order isnt defined off their time duration
-        rand.shuffle(jobs)
-
+        jobs, jobs_info = shuffle(jobs, jobs_info)
+       
         # return the jobs and job_info lists made up of the profiles and the log info respectively
         return(jobs, jobs_info)
 
@@ -105,10 +106,13 @@ class Job:
             if res==dom_res[0]:
                 res_vec[index] = float(np.random.uniform(low=.25, high=.5, size=1))
                 # concat. strings to make a "this resource is dominant" entry in the log
-                self.job_data[index] = res + " is dominant"
+                uhhh = res + " is dominant"
+                self.job_data[index] = uhhh
             else:
                 res_vec[index] = float(np.random.uniform(low=.05, high=.1, size=1))
-                self.job_data[index] = res + " is not  dominant"
+                uhhh = res + " is not  dominant"
+                self.job_data[index] = uhhh
+                
 
         # Check the duration label for the given job
         if loonggg==True:
@@ -129,5 +133,7 @@ class Job:
 # for testing
 job_0b = JobGrabber(.2, ["cpu", "gpu"])
 
-jobs, info = job_0b.getJobs(10)
+jobss, info = job_0b.getJobs(10)
 
+print(jobss)
+print(info)
