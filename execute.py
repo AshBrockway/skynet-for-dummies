@@ -38,3 +38,8 @@ Further considerations:
 
 TODO: set up code for this file
 """
+
+def main():
+    pass
+
+main()
