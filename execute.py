@@ -5,10 +5,36 @@ Purpose: This file will execute the model, calling each individual component's c
 
 """
 
-from parameters import TuneMe as pa
-from job import JobGrabber as jg
+from parameters import TuneMe as Par
+from tuning import TuneMe as Tune
+from job import JobGrabber as JobG
+from DBconnect import DBconnect as DB
+from enviornment import ClusterEnv as Env
+from Outline_of_DPN_training import DPN
+from compare import SJF, Packer, FIFO, Tetris
 
 
-class BuildSkynet:
-    def __init__(self, ):
-        pass
+"""
+Steps:
+    1. set model parameters using 'TuneMe' class in parameters.py and tuning.py
+        1b. Eventually - passing in parameters from Dashboard
+    2. create jobs for model to run with 'JobGrabber' class in job.py
+    3. export initial parameters and jobs to database with DBConnect
+    4. pass parameters and jobs to enviornment for construction
+    5. repeat next steps:
+        5a. Pass enviornment to DPN training for policy analysis/selection  (If using alternate method, use that here instead)
+        5b. Pass policies back to Enviornment, process and create next stage
+        5c. Update datbase with what jobs were completed and the stage
+        ...
+        5a. Pass enviornment to DPN training for policy analysis/selection
+        ...
+    Repeat until all jobs have been completed
+    6. process final stats for model - total slowdown or total time to completion
+    7. output final stats to database
+
+Further considerations:
+    1. Do we want the alterantive models to run concurrently with DPN model, or separately? If concurrently, will impact performance
+        and if separately, we will need some way to save jobs to use again.
+
+TODO: set up code for this file
+"""
