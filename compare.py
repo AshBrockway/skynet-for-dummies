@@ -9,7 +9,7 @@ Purpose: This file contains multiple classses, outlining each of the comparison 
         based on that score.
         *Note - The method for this is not obvious from either paper, will need to look through the DeepRM repository to get a better idea how it works
 
-    The idea for these classes is to function similar to the DPN - at each step, select what jobs to process, send it back to the enviornment
+    The idea for these classes is to function similar to the DPN - at each step, select what jobs to process, send it back to the environment
 
 """
 
@@ -22,7 +22,7 @@ class SJF():
 
     def select_policies():
         """
-        the function to select what jobs to send to enviornment
+        the function to select what jobs to send to environment
         """
         pass
 
@@ -36,7 +36,7 @@ class Packer():
 
     def select_policies():
         """
-        the function to select what jobs to send to enviornment
+        the function to select what jobs to send to environment
         """
         pass
 
@@ -51,7 +51,7 @@ class FIFO():
 
     def select_policies():
         """
-        the function to select what jobs to send to enviornment
+        the function to select what jobs to send to environment
         """
         pass
 
@@ -66,7 +66,7 @@ class Tetris():
 
     def select_policies():
         """
-        the function to select jobs, based on analyze_job() function.  This is the output to send to enviornment
+        the function to select jobs, based on analyze_job() function.  This is the output to send to environment
         """
         pass
 

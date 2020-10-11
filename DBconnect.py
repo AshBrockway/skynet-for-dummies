@@ -26,7 +26,7 @@ class DBconnect:
 
     def updatejob():
         """
-        This function will update the jobs in the database each time the enviornment moves to a new stage, with info on the length it took and what
+        This function will update the jobs in the database each time the environment moves to a new stage, with info on the length it took and what
         timestep the job was completed in, etc.
         """
         pass
