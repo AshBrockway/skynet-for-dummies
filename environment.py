@@ -42,10 +42,11 @@ class ClusterEnv:
 
         # Grab some jobs
         jobs = jg(pct_lj, ["cpu", "gpu"])
+        # jobs_profile is the values themselfs, log is the string info about the jobs
         self.jobs_profile, self.jobs_log = jobs.getJobs(set_length)
 
         # Populate the empty state with the jobs
-        self.filled = objs_state.fill(self.jobs_profile)
+        self.filled, self.backlog = objs_state.fill(self.jobs_profile, self.obs_state)
 
     # TODO (@ash)
     # # given that a job has been chosed, move its resource usage into the relevant grids
@@ -55,4 +56,6 @@ class ClusterEnv:
 
 env = ClusterEnv(10)
 
-print(env.obs_state)
+
+
+print(env.filled)
