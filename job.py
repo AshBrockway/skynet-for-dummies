@@ -115,7 +115,7 @@ class Job:
                 
 
         # Check the duration label for the given job
-        if loonggg==True:
+        if loonggg:
             job_duration = float(np.random.randint(low=10, high = 15, size = 1))
             # store the label in the log
             self.job_data.append("Long Job")
@@ -134,6 +134,3 @@ class Job:
 job_0b = JobGrabber(.2, ["cpu", "gpu"])
 
 jobss, info = job_0b.getJobs(10)
-
-print(jobss)
-print(info)
