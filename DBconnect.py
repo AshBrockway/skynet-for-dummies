@@ -27,10 +27,10 @@ class DBconnect:
         """
         print('Connecting to postgres database...')
         conn = psycopg2.connect(
-            # update to ini file for enhance security 
+            # update to ini file for enhance security
             host="localhost",
             database="postgres",
-            user="postgres",
+            user="jhobbs",
             password="postgres")
 
         cur = conn.cursor()
