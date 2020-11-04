@@ -34,7 +34,6 @@ The itial object will be a matrix of 0s, including 0 padding between rows for di
 The fill method will fill the grid with the job profiles from the jobs.py file #
 """
 import numpy as np
-import random as rand
 from job import JobGrabber as jg
 import matplotlib.pyplot as plt
 
@@ -106,7 +105,7 @@ class TuneMe:
         
         for job in self.jobs_subset:
             job_count += 1
-            print(job)
+            
             # using the # job being visualized, we find the starting index of the grid, given our rows, to start filling at
             if job_count < 1: 
                 start_col = int(self.res_max_len) + 1 
@@ -127,7 +126,6 @@ class TuneMe:
                 count_full_elements = int(res_use - partial_res_use)
                 
                 if count_full_elements != 0: 
-                    
                     full_val = np.repeat(1, count_full_elements)
                     prog_list = np.append(full_val, [float(partial_res_use)])
                     for row in range(start_row, end_row):
