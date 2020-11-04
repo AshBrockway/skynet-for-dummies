@@ -6,7 +6,7 @@ The purpose of this file is to produce a job set with a specified number of jobs
 
 Description:
 The purpose is to take an input of the length of a jobset to be constructed for
-1 episode of training. One job will consist of both a time duration and a resource vector.
+training. One job will consist of both a time duration and a resource vector.
 The dimensions of the resource vector are stored in parameters.py in the var. res_num.
 
 For DeepRM the resource vector will have 2 elements and look like this:
@@ -34,14 +34,10 @@ class JobGrabber:
     The parameters in the constructor for this class are:
         lt_prop: the proportion of long time durations
         resource_list: a list of the string names of the resources
-    The JobGrabber class utlizes the Job class within its getJobs method to combine a set of job's
-    resource and time profiles.
-
-    jobs is the resource and time profiles of the jobset.
+    The JobGrabber class utlizes the Job class within its getJobs method to combine a set of job's resource vector and time profile.
     And jobs_info is the job log with information on the ratio and dominant resource of a given job.
-
-
     """
+
     def __init__(self, lt_prop, resource_list):
 
         # time duration ratio
@@ -76,14 +72,9 @@ class JobGrabber:
 
         # shuffle the jobs so that their order isnt defined off their time duration
         jobs, jobs_info = shuffle(jobs, jobs_info)
-       
+
         # return the jobs and job_info lists made up of the profiles and the log info respectively
         return(jobs, jobs_info)
-
-    # this is the string method to define what we will see when we want to print job class
-    # # TODO (@ash) understand how this works
-    # def __str__(self):
-        # pass
 
 
 
@@ -112,7 +103,7 @@ class Job:
                 res_vec[index] = float(np.random.uniform(low=.05, high=.1, size=1))
                 uhhh = res + " is not dominant"
                 self.job_data[index] = uhhh
-                
+
 
         # Check the duration label for the given job
         if loonggg:
@@ -131,6 +122,6 @@ class Job:
 
 
 # for testing
-job_0b = JobGrabber(.2, ["cpu", "gpu"])
+#job_0b = JobGrabber(.2, ["cpu", "gpu"])
 
-jobss, info = job_0b.getJobs(10)
+#jobss, info = job_0b.getJobs(10)

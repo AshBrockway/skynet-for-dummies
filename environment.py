@@ -12,8 +12,6 @@ Overview of RL Parts:
     5. Learn from experience
     6. Iterate until strategy is optimal based on loss
 
-TODO
-Class Environ
 """
 
 from parameters import TuneMe as pa
@@ -51,11 +49,16 @@ class ClusterEnv:
     # TODO (@ash)
     # # given that a job has been chosed, move its resource usage into the relevant grids
     # # # if time_step=T then the rows will also shift up so that T_{0+1} becomes the top row and a new last shown timestep is included
-    def updateState(self, job_choice, time_step=True):
+    def updateState(self, job_choice):
+        pass
+    
+    def updateTime(self):
         pass
 
-env = ClusterEnv(10)
-
-
+env = ClusterEnv(set_length=70)
 
 print(env.filled)
+
+#plt.matshow(filed, cmap=plt.get_cmap('gray_r'))
+#plt.axis('off')
+#plt.show()
