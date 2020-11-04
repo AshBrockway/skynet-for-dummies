@@ -103,14 +103,14 @@ class Job:
         # enumerating the resource list, we check for whether the resource was chosen as dominant
         # # and then sample that resources usage
         for index, res in enumerate(res_list):
-            if res==dom_res[0]:
+            if res == dom_res[0]:
                 res_vec[index] = float(np.random.uniform(low=.25, high=.5, size=1))
                 # concat. strings to make a "this resource is dominant" entry in the log
                 uhhh = res + " is dominant"
                 self.job_data[index] = uhhh
             else:
                 res_vec[index] = float(np.random.uniform(low=.05, high=.1, size=1))
-                uhhh = res + " is not  dominant"
+                uhhh = res + " is not dominant"
                 self.job_data[index] = uhhh
                 
 

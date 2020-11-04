@@ -41,9 +41,9 @@ class ClusterEnv:
         pct_lj = .2
 
         # Grab some jobs
-        jobs = jg(pct_lj, ["cpu", "gpu"])
-        # jobs_profile is the values themselfs, log is the string info about the jobs
-        self.jobs_profile, self.jobs_log = jobs.getJobs(set_length)
+        grabber = jg(pct_lj, ["cpu", "gpu"])
+        # jobs_profile is the values themselves, log is the string info about the jobs
+        self.jobs_profile, self.jobs_log = grabber.getJobs(set_length)
 
         # Populate the empty state with the jobs
         self.filled, self.backlog = objs_state.fill(self.jobs_profile, self.obs_state)
