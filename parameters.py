@@ -104,7 +104,7 @@ class TuneMe:
                     b. For each Job in queue:
                         i. Fill out the % usage in the # of rows associated with their time
         """
-        # Now start with the easy part, place the # of jobs in the backlog in the top right element of the grid
+        # Now start with the easy part, place the # of jobs in the backlog in the last column of the grid
     
         grid[0:(height), -1] = [1 for x in range(height)]
 
