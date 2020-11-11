@@ -76,15 +76,22 @@ class JobGrabber:
 
         # shuffle the jobs so that their order isnt defined off their time duration
         jobs_list = list(jobs.items())
-        rand.shuffle(jobs_list)
         jobs_info_list = list(jobs_info.items())
-        rand.shuffle(jobs_info_list)
+        zipped = list(zip(jobs_list, jobs_info_list))
+        rand.shuffle(zipped)
         
-        jobsd = dict(jobs_list)
-        jobs_infod = dict(jobs_info_list)
-
+        list_jobs, list_info = zip(*zipped)
+        jobsd = dict(list_jobs)
+        jobs_infod = dict(list_info)
+        
+        target_keys = [key for key in range(1, 11)]
+        
+        jobsnd = dict(zip(target_keys, jobsd.values()))
+        jobs_infond = dict(zip(target_keys, jobs_infod.values()))
+        
+        #for nkey, numkey in zip(jobs
         # return the jobs and job_info lists made up of the profiles and the log info respectively
-        return(jobs, jobs_info)
+        return(jobsnd, jobs_infond)
 
 
 
