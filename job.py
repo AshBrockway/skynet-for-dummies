@@ -51,9 +51,13 @@ class JobGrabber:
     # Method to get a job of set_num length, meaning set_num=#of jobs in set
     def getJobs(self, set_num):
         # Create lists of 0 that match the specified number of jobs for job profiles and logs
-        jobs = [ 0 for x in range(set_num) ]
-        jobs_info = [ 0 for x in range(set_num) ]
+        #jobs = [ 0 for x in range(set_num) ]
+        #jobs_info = [ 0 for x in range(set_num) ]
 
+        jobs = {}
+        jobs_info = {}
+        jobsd = {}
+        jobs_infod = {}
         # For set_num iterations:
         for i in range(set_num):
             # randomly choose one of the resources to be dominant
@@ -67,11 +71,17 @@ class JobGrabber:
                 job_ob = Job(True, dom_ress, self.res_list)
 
             # then for each job fill the jobs and the job_info list
-            jobs[i] = job_ob.job_info
-            jobs_info[i] = job_ob.job_data
+            jobs[i + 1] = job_ob.job_info
+            jobs_info[i + 1] = job_ob.job_data
 
         # shuffle the jobs so that their order isnt defined off their time duration
-        jobs, jobs_info = shuffle(jobs, jobs_info)
+        jobs_list = list(jobs.items())
+        rand.shuffle(jobs_list)
+        jobs_info_list = list(jobs_info.items())
+        rand.shuffle(jobs_info_list)
+        
+        jobsd = dict(jobs_list)
+        jobs_infod = dict(jobs_info_list)
 
         # return the jobs and job_info lists made up of the profiles and the log info respectively
         return(jobs, jobs_info)
@@ -122,6 +132,6 @@ class Job:
 
 
 # for testing
-#job_0b = JobGrabber(.2, ["cpu", "gpu"])
+job_0b = JobGrabber(.2, ["cpu", "gpu"])
 
-#jobss, info = job_0b.getJobs(10)
+jobss, info = job_0b.getJobs(10)
