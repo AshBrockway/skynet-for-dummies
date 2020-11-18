@@ -1,13 +1,12 @@
 """
 Author: Ashley Brockway, ashley.brockway15@ncf.edu
-Date: 9/30/20
+Date: 9/30/20-11/11/2020
+
 Purpose:
 The purpose of this file is to produce a job set with a specified number of jobs.
 
 Description:
-The purpose is to take an input of the length of a jobset to be constructed for
-training. One job will consist of both a time duration and a resource vector.
-The dimensions of the resource vector are stored in parameters.py in the var. res_num.
+The purpose is to take an input of the length of a jobset to be constructed for training. One job will consist of both a time duration and a resource vector. The dimensions of the resource vector are stored in parameters.py in the var. res_num.
 
 For DeepRM the resource vector will have 2 elements and look like this:
     (r_1, r_2)
@@ -17,11 +16,12 @@ But wait, you are probably wondering how we will get values of r_1 and r_2, ther
 Meaning a set of 3 jobs will look like this:
 
     Job 1:  ((r_{1,1} , r_{1, 2}), T_{1})
-    Job 2:  ((r_{2,1} , r_{2, 2}), T_{1})
-    Job 3:  ((r_{3,1} , r_{3, 2}), T_{1})
+    Job 2:  ((r_{2,1} , r_{2, 2}), T_{2})
+    Job 3:  ((r_{3,1} , r_{3, 2}), T_{3})
 
 Because of the job method including that the set be 20% long time duration and 80% short time duration, and randomly choose which resource would be domination (dominant: [0.25, .50], non-dominant: [.05, .10]) a log will be kept.
 
+The job profiles sets (the numerical values of their information) and info sets (the string form description of the jobs) are stored in dictionary where the 
 """
 
 import numpy as np
@@ -71,8 +71,8 @@ class JobGrabber:
                 job_ob = Job(True, dom_ress, self.res_list)
 
             # then for each job fill the jobs and the job_info list
-            jobs[i + 1] = job_ob.job_info
-            jobs_info[i + 1] = job_ob.job_data
+            jobs[i + 1] = [job_ob.job_info]
+            jobs_info[i + 1] = [job_ob.job_data]
 
         # shuffle the jobs so that their order isnt defined off their time duration
         jobs_list = list(jobs.items())
@@ -84,7 +84,7 @@ class JobGrabber:
         jobsd = dict(list_jobs)
         jobs_infod = dict(list_info)
         
-        target_keys = [key for key in range(1, 11)]
+        target_keys = [key for key in range(1, set_num + 1)]
         
         jobsnd = dict(zip(target_keys, jobsd.values()))
         jobs_infond = dict(zip(target_keys, jobs_infod.values()))
@@ -139,6 +139,6 @@ class Job:
 
 
 # for testing
-job_0b = JobGrabber(.2, ["cpu", "gpu"])
+#job_0b = JobGrabber(.2, ["cpu", "gpu"])
 
-jobss, info = job_0b.getJobs(10)
+#jobss, info = job_0b.getJobs(10)
