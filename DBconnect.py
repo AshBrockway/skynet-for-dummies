@@ -1,5 +1,7 @@
 """
-Author: Andrew Reilly, andrew.reilly19@ncf.edu
+Author: Andrew Reilly, andrew.reilly19@ncf.edu, Jamie Hobbs, jamie.hobbs19@ncf.edu
+=======
+
 Date: 10/10/20
 Purpose: The class in this file is designed to take jobs and parameters from our model and store them in a database for
 use in frontend dashboard visualizing the network.
@@ -14,7 +16,10 @@ Using a schema as the one described above will allow our dashboard to have two s
 and a comparison view showing comparisons of models (over time)
 """
 
+import psycopg2
+
 class DBconnect:
+    # TODO (@jmhobbs29)
     def __init__(self,):
         """
         Initialization of class - defines what database to connect to and what tables to use
@@ -22,7 +27,20 @@ class DBconnect:
             that will be processed in this iteration of the model, as well as some parameters that will be updated later.  As we will want
             this to take every job that will be run, we will need to initialize this in the database after jobs have been created and
         """
-        pass
+      print('Connecting to postgres database...')
+        conn = psycopg2.connect(
+            # update to ini file for enhance security
+            host="localhost",
+            database="postgres",
+            user="jhobbs",
+            password="postgres")
+
+        cur = conn.cursor()
+        cur.execute('SELECT version()')
+        db_version = cur.fetchone()
+        print(db_version)
+        cur.close()
+        #pass
 
     def updatejob():
         """
@@ -37,4 +55,8 @@ class DBconnect:
         model is being limited on (for instance, total time to completion or average job slowdown)
         """
         pass
+
+
+if __name__ == '__main__':
+   DBconnect()
 

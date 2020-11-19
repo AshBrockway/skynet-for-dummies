@@ -75,17 +75,22 @@ This file will take parameters from other classes and export them to a postgres 
 
 #### In Outline_of_DPN_training.py file:
 
-1. TODO - curried_valuation.valuation() - (@andrew)
+1. TODO - Define the policy network for training - ()
+
+      Explanation - Define the model that we'll be training. Worth experimenting with architecture, and so forth.
 
 
-    Explanation - compute valuation with the episode/trajectory after it's been padded. Result intended to be used as
-    map(valuation, episodes_array) to return valuation of each episodes.
+2. <s>TODO - curried_valuation.valuation()</s> - (@justin)
 
-2. <s>TODO - DPN.train_on_jobs()</s> - (@justin)
+
+    <s>Explanation - compute valuation with the episode/trajectory after it's been padded. Result intended to be used as
+    map(valuation, episodes_array) to return valuation of each episodes.</s>
+
+3. <s>TODO - DPN.train_on_jobs()</s> - (@justin)
 
     <s>Explanation - figured out how to access the DPN's gradient shape and initialize it to all zeros </s>
 
-3. <s>TODO - DPN.train_on_jobs()</s> - (@justin)
+4. <s>TODO - DPN.train_on_jobs()</s> - (@justin)
 
     <s>Explanation - Figured out how to update the gradient sum based on the policy chosen with the relativized reward. Moreover, figured out how to update the weights of the network after summing the relativized gradient updates. </s>
 
