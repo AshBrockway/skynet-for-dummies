@@ -13,9 +13,13 @@ Most important is the train_on_jobs method for updating the weights of the netwo
 
 
 import numpy as np
-from random
+import random
+import torch
 from torch.distributions import Categorical
-from torch import optim
+from torch import nn, optim
+
+
+#print("PyTorch:\t{}".format(torch.__version__))
 
 
 ITERATIONS = 1000 #kinda like epochs?
@@ -23,6 +27,9 @@ BATCH_SIZE = 10   #Might be the exact same thing as episodes, up for interpretat
 EPISODES = 20     #How many trajectories to explore for a given job. Essentually to get a better estimate of the expected reward.
 DISCOUNT = 0.99   #how much to discount the reward
 ALPHA = 0.001     #learning rate?
+
+#TODO: WHAT IS GAMMA??? (used in valuation function, line 56(ish))
+gamma = .99
 
 def curried_valuation(length_of_longest_trajectory):
     '''
@@ -53,23 +60,26 @@ def curried_valuation(length_of_longest_trajectory):
     return valuation
 
 
-class DPN:#(keras_module or whatever):
-    def __init(self)__:
-        #Super(self, __init__) #Initialize base methods of keras NN module stuff?
-        '''
-        define your shit about the NN stuff initial weights, architecture, and so forth
-        WE NEED TO FIGURE OUT HOW TO GET GRADIENT of log(policy(state, action))
-        Also allow weights to be updated through addition? Something like that.
+class DPN:  #ANN with Pytorch
+    def __init__(self, env):
+        self.n_inputs = len(env.flatten())
+        #TODO: Make outputs reflexive
+        self.n_outputs = 11
 
+        # Define network
+        self.network = nn.Sequential(
+            nn.Linear(self.n_inputs, 128),
+            nn.ReLU(),
+            nn.Linear(128, 32),
+            nn.ReLU(),
+            nn.Linear(32, self.n_outputs))
 
-        INPUT_SIZE = size and shape from the environment's output for a state  TODO
-        OUTPUT_SIZE = number of possible actions                               TODO
+    def predict(self, state):
+        state = state.flatten()
+        action_probs = self.network(torch.FloatTensor(state))
+        return action_probs
 
-        Probably include stuff to interact with the environment after inputting a class
-
-        all caps words are hyperparameters you would set.
-        '''
-        self.prob_history = {} #Might be a dumb idea, but it stores the probability that the network chose the action given the state?
+        #self.prob_history = {} #Might be a dumb idea, but it stores the probability that the network chose the action given the state?
                                # key looks like (state, action) value is the probability? marked with optional1
     def train(self, ITERATIONS):
         '''
@@ -139,7 +149,7 @@ class DPN:#(keras_module or whatever):
             for i in range(EPISODES): #swapped two for loops
                 for t in range(longest_trajectory):
                     try:
-                        state, action, reward = episodes_array[i][t]
+                        state, action, reward = episode_array[i][t]
                     except IndexError: #this occurs when the trajectory died
                         break
                     #get probabilities from the network. We already did this, but pretty sure we gotta do it again.
