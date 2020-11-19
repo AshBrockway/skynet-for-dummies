@@ -57,10 +57,11 @@ class TuneMe:
         # define resource capacity
         self.res_cap = 1.0 # % in use
         # resource capacities shown in the grid, think of filling these as usage_proportion*12
-        self.res_max_len = self.res_cap * 12
+        self.res_vals = 12
+        self.res_max_len = self.res_cap * int(self.res_vals)
 
         # .5 units of resource is the max % of resource used by one job in current sample
-        self.job_res_max = .5 * 12
+        self.job_res_max = .5 * int(self.res_vals)
 
         # define jobsets aspects
         self.set_len = self.backlog_max + self.queue_len
@@ -165,7 +166,7 @@ class TuneMe:
             job_prog_list[res] = job_prog
         return(job_prog_list)
 # Testing
-
+"""
 pa = TuneMe()
 emptyGrid = pa.getGrid()
 grabber = jg(.2, ['cpu', 'gpu'])
@@ -175,3 +176,4 @@ ggrid = pa.fill(jobsset, emptyGrid)
 plt.matshow(ggrid, cmap=plt.get_cmap('gray_r'))
 plt.axis('off')
 plt.show()
+"""

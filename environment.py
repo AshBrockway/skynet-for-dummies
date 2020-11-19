@@ -49,39 +49,70 @@ class ClusterEnv:
     
     def updateState(self, job_choice, last_grid):
         
-        schedule_job = self.jobs_profile[job_choice]
-        #print(schedule_job)
-        new_grid = last_grid
+        if job_choice==0: 
+            new_grid = last_grid
+            stop = True
+        else: 
+            schedule_job = self.jobs_profile[job_choice]
+            #print(schedule_job)
+            new_grid = last_grid
         
-        for resource in range(self.objs_state.res_num): 
+            for resource in range(self.objs_state.res_num): 
+                stop = False
+                start_row = int((resource * self.objs_state.time_dim) + (resource * 2))
+                end_row = int(start_row + schedule_job[0][-1])
             
-            start_row = int((resource * self.objs_state.time_dim) + (resource * 2))
-            end_row = int(start_row + schedule_job[0][-1])
+                if job_choice==1:
+                    old_start_col = int(self.objs_state.res_max_len) + 1
+                else:
+                    old_start_col = int(self.objs_state.res_max_len) + 1 +(int(self.objs_state.job_res_max) * (job_choice - 1)) + (job_choice - 1)
+                
+                for elem in range(int(self.objs_state.res_max_len)):
             
-            for elem in range(int(self.objs_state.res_max_len)):
-                """
-                if elem==(int(self.objs_state.res_max_len)-1) & elem!=0:
-                    new_grid = old_grid
-                    
-                """
                     # then move forward in time
-                if last_grid[start_row,elem]==0: 
-                    for row in range(start_row, end_row):
-                        new_grid[row, elem:elem + len(schedule_job[1][resource])] = schedule_job[1][resource]
+                    if last_grid[start_row,elem]==0: 
+                        if (int(self.objs_state.res_max_len) - elem) < len(schedule_job[1][resource]):
+                            new_grid = last_grid 
+                            stop = True
+                        else:
+                            for row in range(start_row, end_row):
+                                new_grid[row, elem:elem + len(schedule_job[1][resource])] = schedule_job[1][resource]
+                                new_grid[row, old_start_col:old_start_col + int(self.objs_state.job_res_max)] = [0 for x in range(int(self.objs_state.job_res_max))] 
+                
+                        break
+            
+                if stop: 
                     break
+        if stop: 
+            new_grid = self.updateTime(new_grid2=new_grid) 
+            # call update time
                 
         return(new_grid)
     
-    def updateTime(self, new_grid, old_backlog):
-        pass
+    def updateTime(self, new_grid2):
+        time_grid = new_grid2
+        start_col = 0 
+        end_col = int(self.objs_state.res_max_len) - 1
+        
+        res1_start_row = 0 
+        res1_end_row = 21
+        
+        res2_start_row = 22
+        res2_end_row = 40
+        
+        time_grid[res1_start_row:res1_end_row - 1, start_col:end_col] = new_grid2[res1_start_row + 1:res1_end_row, start_col:end_col]
+        
+        time_grid[res2_start_row:res2_end_row - 1, start_col:end_col] = new_grid2[res2_start_row + 1: res2_end_row, start_col:end_col]
+        
+        return(time_grid)
 
 env = ClusterEnv(set_length=70)
 
 grid = env.filled
 
-new = env.updateState(1, grid)
-newer = env.updateState(2, new)
-newest = env.updateState(4, newer)
+new = env.updateState(8, grid)
+
+#newer = env.updateState(0, new)
 
 plt.matshow(new, cmap=plt.get_cmap('gray_r'))
 plt.axis('off')
