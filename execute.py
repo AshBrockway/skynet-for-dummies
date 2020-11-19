@@ -5,13 +5,19 @@ Purpose: This file will execute the model, calling each individual component's c
 
 """
 
-from parameters import TuneMe as Par
-from tuning import TuneMe as Tune
-from job import JobGrabber as JobG
+#package imports
+import numpy as np
+import pandas as pd
+
+#Other file imports
+from parameters import TuneMe as pa
+#from tuning import TuneMe as TuneMe2
+from job import JobGrabber
 from DBconnect import DBconnect as DB
-from enviornment import ClusterEnv as Env
-from Outline_of_DPN_training import DPN
-from compare import SJF, Packer, FIFO, Tetris
+#from environment import ClusterEnv as Env
+#from Outline_of_DPN_training import DPN
+from compare import compare_models as comp
+
 
 
 """
@@ -40,7 +46,27 @@ Further considerations:
 TODO: set up code for this file
 """
 
-def main():
-    pass
 
-main()
+#getting/setting parameters, etc.
+pars = pa()
+res_num = pars.res_num
+res_cap = pars.res_cap
+
+
+#getting jobs
+n_jobs = 30
+job_obj = JobGrabber(.2, ["cpu", "gpu"])
+job_data, job_info = job_obj.getJobs(n_jobs)
+
+#comparison models object creation
+comp_models = comp(job_data, res_num, res_cap)
+
+df = comp_models.full_jobs_df
+print(comp_models.FIFO_loss)
+print(comp_models.SJF_loss)
+print(comp_models.Random_loss)
+print(comp_models.Packer_loss)
+
+
+
+
