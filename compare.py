@@ -12,6 +12,8 @@ Purpose: This file contains multiple classses, outlining each of the comparison 
     The idea for these classes is to function similar to the DPN - at each step, select what jobs to process, send it back to the environment to process
     the next step. The main difference is that this won't take an image as input, but instead they will simply take a list of jobs
 
+TODO: Fill in additional comments
+
 """
 
 import pandas as pd

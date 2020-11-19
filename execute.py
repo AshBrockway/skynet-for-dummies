@@ -13,7 +13,7 @@ import pandas as pd
 from parameters import TuneMe as pa
 #from tuning import TuneMe as TuneMe2
 from job import JobGrabber
-from DBconnect import DBconnect as DB
+#from DBconnect import DBconnect as DB
 #from environment import ClusterEnv as Env
 #from Outline_of_DPN_training import DPN
 from compare import compare_models as comp
@@ -54,7 +54,7 @@ res_cap = pars.res_cap
 
 
 #getting jobs
-n_jobs = 30
+n_jobs = 100
 job_obj = JobGrabber(.2, ["cpu", "gpu"])
 job_data, job_info = job_obj.getJobs(n_jobs)
 
@@ -67,6 +67,14 @@ print(comp_models.SJF_loss)
 print(comp_models.Random_loss)
 print(comp_models.Packer_loss)
 
+
+#Running the DPN
+emptyGrid = pars.getGrid()
+ggrid = pars.fill(job_data, emptyGrid)
+
+
+ggrid2 = ggrid.flatten()
+len(ggrid2)
 
 
 
