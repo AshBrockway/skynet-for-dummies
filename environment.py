@@ -12,12 +12,12 @@ Overview of RL Parts:
     5. Learn from experience
     6. Iterate until strategy is optimal based on loss
 
-TODO
-Class Environ
 """
 
 from parameters import TuneMe as pa
 from job import JobGrabber as jg
+import matplotlib.pyplot as plt
+
 
 
 class ClusterEnv:
@@ -30,29 +30,90 @@ class ClusterEnv:
             2. jobs that are entering our environment
         """
 
-        # Build grid using dimensions from paramater.py
-        # # # # TODO create a default parameter for the constructor to automatically build given the parameter is set to T its default is F
-
         # Construction of empty state
-        objs_state = pa()
-        self.obs_state = objs_state.getGrid()
+        self.objs_state = pa()
+        self.obs_state = self.objs_state.getGrid()
 
         # percent of long jobs
         pct_lj = .2
-
+        self.reslist = ["cpu", "gpu"]
+        
         # Grab some jobs
-        jobs = jg(pct_lj, ["cpu", "gpu"])
-        self.jobs_profile, self.jobs_log = jobs.getJobs(set_length)
+        grabber = jg(pct_lj, self.reslist)
+        # jobs_profile is the values themselves, log is the string info about the jobs
+        self.jobs_profile, self.jobs_log = grabber.getJobs(set_length)
 
         # Populate the empty state with the jobs
-        self.filled = objs_state.fill(self.jobs_profile)
+        self.filled = self.objs_state.fill(self.jobs_profile, self.obs_state)
 
-    # TODO (@ash)
-    # # given that a job has been chosed, move its resource usage into the relevant grids
-    # # # if time_step=T then the rows will also shift up so that T_{0+1} becomes the top row and a new last shown timestep is included
-    def updateState(self, job_choice, time_step=True):
-        pass
+    
+    def updateState(self, job_choice, last_grid):
+        
+        if job_choice==0: 
+            new_grid = last_grid
+            stop = True
+        else: 
+            schedule_job = self.jobs_profile[job_choice]
+            #print(schedule_job)
+            new_grid = last_grid
+        
+            for resource in range(self.objs_state.res_num): 
+                stop = False
+                start_row = int((resource * self.objs_state.time_dim) + (resource * 2))
+                end_row = int(start_row + schedule_job[0][-1])
+            
+                if job_choice==1:
+                    old_start_col = int(self.objs_state.res_max_len) + 1
+                else:
+                    old_start_col = int(self.objs_state.res_max_len) + 1 +(int(self.objs_state.job_res_max) * (job_choice - 1)) + (job_choice - 1)
+                
+                for elem in range(int(self.objs_state.res_max_len)):
+            
+                    # then move forward in time
+                    if last_grid[start_row,elem]==0: 
+                        if (int(self.objs_state.res_max_len) - elem) < len(schedule_job[1][resource]):
+                            new_grid = last_grid 
+                            stop = True
+                        else:
+                            for row in range(start_row, end_row):
+                                new_grid[row, elem:elem + len(schedule_job[1][resource])] = schedule_job[1][resource]
+                                new_grid[row, old_start_col:old_start_col + int(self.objs_state.job_res_max)] = [0 for x in range(int(self.objs_state.job_res_max))] 
+                
+                        break
+            
+                if stop: 
+                    break
+        if stop: 
+            new_grid = self.updateTime(new_grid2=new_grid) 
+            # call update time
+                
+        return(new_grid)
+    
+    def updateTime(self, new_grid2):
+        time_grid = new_grid2
+        start_col = 0 
+        end_col = int(self.objs_state.res_max_len) - 1
+        
+        res1_start_row = 0 
+        res1_end_row = 21
+        
+        res2_start_row = 22
+        res2_end_row = 40
+        
+        time_grid[res1_start_row:res1_end_row - 1, start_col:end_col] = new_grid2[res1_start_row + 1:res1_end_row, start_col:end_col]
+        
+        time_grid[res2_start_row:res2_end_row - 1, start_col:end_col] = new_grid2[res2_start_row + 1: res2_end_row, start_col:end_col]
+        
+        return(time_grid)
 
-env = ClusterEnv(10)
+env = ClusterEnv(set_length=70)
 
-print(env.obs_state)
+grid = env.filled
+
+new = env.updateState(8, grid)
+
+#newer = env.updateState(0, new)
+
+plt.matshow(new, cmap=plt.get_cmap('gray_r'))
+plt.axis('off')
+plt.show()
