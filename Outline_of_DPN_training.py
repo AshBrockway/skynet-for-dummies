@@ -48,7 +48,7 @@ def curried_valuation(length_of_longest_trajectory):
         out[-1] = x[-1]
         for i in reversed(range(len(x)-1)): #go backwards
             out[i] = x[i] + gamma*out[i+1] #this step valuation = reward + gamma*next_step_valuation
-        assert x.ndim >= 1
+        #assert x.ndim >= 1
         return out
     return valuation
 
@@ -86,7 +86,7 @@ class DPN:#(keras_module or whatever):
             jobs = self.env.make_starting_states(resource_constraints, time) #this would be a list of starting states
             self.train_on_jobs(jobs, optimizer)
 
-    def predict(self, state):
+    def forward(self, state):
         '''
         The forward pass of the network on the given state. Returns the output probabilites for taking the OUTPUT_SIZE probabilites
 
@@ -133,7 +133,7 @@ class DPN:#(keras_module or whatever):
             # Now we need to make the valuations
             longest_trajectory = max(len(episode) for episode in episode_array)
             valuation_fun = curried_valuation(longest_trajectory)
-            cum_values = np.array(map(episode_array, valuation_fun)) #should be a EPISODESxlength sized
+            cum_values = np.array([valuation_fun(ep) for ep in episode_array]) #should be a EPISODESxlength sized
             #can compute baselines without a loop?
             baseline_array = np.array([sum(cum_values[:,i])/EPISODES for i in range(longest_trajectory)]) #Probably defeats the purpose of numpy, but we're essentially trying to sum each valuation array together, and then divide by the number of episodes TODO make it work nicely
             for i in range(EPISODES): #swapped two for loops
