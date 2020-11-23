@@ -96,16 +96,6 @@ class DPN:  #ANN with Pytorch
             jobs = self.env.make_starting_states(resource_constraints, time) #this would be a list of starting states
             self.train_on_jobs(jobs, optimizer)
 
-    def forward(self, state):
-        '''
-        The forward pass of the network on the given state. Returns the output probabilites for taking the OUTPUT_SIZE probabilites
-
-        might already be defined from the initialization after defining your model
-
-        TODO: Rename to forward(self, state), and output appropriate pytorch SHIT
-        '''
-        pass
-
 
     def trajectory(self, current_state, refresh_defaults = True, output_history = []):
         '''
@@ -115,8 +105,8 @@ class DPN:  #ANN with Pytorch
         [(s_0, a_0, r_0), ..., (s_L, a_L, r_l)]
         '''
         if refresh_defaults:
-            output_history = []
-        probs = self.forward(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
+            output_history.clear()
+        probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
         picked_action = Categorical(probs).sample() #returns index of the action/job selected.
         #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
         new_state, reward = self.env.state_and_reward(current_state, picked_action) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
@@ -153,7 +143,7 @@ class DPN:  #ANN with Pytorch
                     except IndexError: #this occurs when the trajectory died
                         break
                     #get probabilities from the network. We already did this, but pretty sure we gotta do it again.
-                    probs = self.forward(state)
+                    probs = self.predict(state)
                     DPN_Theta = Categorical(probs) #Pytorch distribution for Categorical classes. SHOULD connect to the network to update weights.
                     if i == 0 and t == 0: #Define the first loss in the sum
                         loss = -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action)
