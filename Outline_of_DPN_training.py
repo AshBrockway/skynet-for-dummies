@@ -97,23 +97,25 @@ class DPN:  #ANN with Pytorch
             self.train_on_jobs(jobs, optimizer)
 
 
-    def trajectory(self, current_state, refresh_defaults = True, output_history = []):
+    def trajectory(self, current_state):
         '''
         Maybe this implementation doesn't utilize GPUs very well, but I have no clue or not.
 
         Final output looks like:
         [(s_0, a_0, r_0), ..., (s_L, a_L, r_l)]
         '''
-        if refresh_defaults:
-            output_history.clear()
-        probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
-        picked_action = Categorical(probs).sample() #returns index of the action/job selected.
-        #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
-        new_state, reward = self.env.state_and_reward(current_state, picked_action) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
-        output_history.append( (current_state, picked_action, reward) )
-        if new_state is None: #essentially, you died or finished your trajectory
-            return output_history
-        return  self.trajectory(new_state, False, output_history)
+        output_history = []
+        while True:
+            probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
+            picked_action = Categorical(probs).sample() #returns index of the action/job selected.
+            #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
+            new_state, reward = self.env.state_and_reward(current_state, picked_action) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
+            output_history.append( (current_state, picked_action, reward) )
+            if new_state is None: #essentially, you died or finished your trajectory
+                break
+            else:
+                current_state = new_state
+        return output_history
 
     def train_on_jobs(self,jobset, optimizer):
         '''
