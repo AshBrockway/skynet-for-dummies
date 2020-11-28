@@ -48,22 +48,21 @@ class ClusterEnv:
         self.filled = self.objs_state.fill(self.jobs_profile, self.obs_state)
         self.past_jobs = {}
         self.choice_list = []
-        self.count = 0
-        self.scheds = 0
+        self.count = 0 
     
-    def updateState(self, job_choice, last_grid):
+    def updateState(self, job_choice, last_grid, stop=False):
+        
         if job_choice==0: 
             new_grid = last_grid
             stop = True
         else: 
-            self.scheds += 1
+            
             schedule_job = self.jobs_profile[job_choice]
             self.past_jobs[job_choice] = schedule_job
-            #print(schedule_job)
             new_grid = last_grid
         
             for resource in range(self.objs_state.res_num): 
-                stop = False
+                
                 start_row = int((resource * self.objs_state.time_dim) + (resource * 2))
                 end_row = int(start_row + schedule_job[0][-1])
             
@@ -78,13 +77,13 @@ class ClusterEnv:
             
                     # then move forward in time
                     if last_grid[start_row,elem]==0: 
-                        if (int(self.objs_state.res_max_len) - elem) < len(schedule_job[1][resource]):
+                        if (int(self.objs_state.res_max_len) - elem) < len(self.past_jobs[job_choice][1][resource]):
                             new_grid = last_grid 
                             job_choice = "B" 
                             stop = True
                         else:
                             for row in range(start_row, end_row):
-                                new_grid[row, elem:elem + len(schedule_job[1][resource])] = schedule_job[1][resource]
+                                new_grid[row, elem:elem + len(self.past_jobs[job_choice][1][resource])] = schedule_job[1][resource]
                                 new_grid[row, old_start_col:old_start_col + int(self.objs_state.job_res_max)] = [0 for x in range(int(self.objs_state.job_res_max))] 
                                 
                 
@@ -95,7 +94,6 @@ class ClusterEnv:
                 
         self.choice_list.append(job_choice)
         if stop: 
-         
             self.job_choi = self.choice_list[-1]
             self.choice_list.append("T")
             new_grid = self.updateTime(new_grid2=new_grid) 
@@ -119,16 +117,17 @@ class ClusterEnv:
         
         time_grid[res2_start_row:res2_end_row - 1, start_col:end_col] = new_grid2[res2_start_row + 1: res2_end_row, start_col:end_col]
         
-        #time_grid = self.shiftCurrent(time_grid)
-        
+        mid_grid = self.shiftCurrent(time_grid)         
         stp = 1
         for i in self.choice_list:
             choice = i
+            moved_grid = mid_grid 
             if self.count < 2: 
                 if choice=="T" or choice=="B" or choice==0:
                     pass
                 else: 
-                    moved_grid = self.moveFromBack(time_grid, i)
+                    moved_grid = self.moveFromBack(mid_grid, i)
+                    break
             else: 
                 if choice !="T" or choice != "B" or choice==0:
                     pass
@@ -137,10 +136,10 @@ class ClusterEnv:
                     if stp < self.count: 
                         pass 
                     else: 
-                        moved_grid = self.moveFromBack(time_grid, i)
+                        moved_grid = self.moveFromBack(mid_grid, i)
+                        break
            
-        
-        
+    
         if len(self.objs_state.backlog_subset.keys()) > 41 :
                 pass
         else: 
@@ -149,11 +148,11 @@ class ClusterEnv:
 
     def moveFromBack(self, tg, jc):
         moved_stuff = tg
-        newie = self.objs_state.backlog_subset[self.scheds + self.objs_state.queue_len]
+        newie = self.objs_state.backlog_subset[(len(self.past_jobs.keys()) + 10)]
         del self.objs_state.jobs_subset[jc]
         
         self.objs_state.jobs_subset[jc] = newie
-        del self.objs_state.backlog_subset[self.scheds + self.objs_state.queue_len]
+        del self.objs_state.backlog_subset[(len(self.past_jobs.keys()) + 10)]
         
         empty_job_start_col = self.past_jobs[jc][2][0]
         times = int(self.objs_state.jobs_subset[jc][0][-1])
@@ -183,7 +182,26 @@ class ClusterEnv:
         return(moved_stuff)
     
     def shiftCurrent(self, tg): 
-        pass
+        ng = tg
+        for resource in range(2): 
+            length_shift = 0 
+            start_row = int((resource * self.objs_state.time_dim) + (resource * 2))
+            end_row = int(start_row + self.objs_state.time_dim)
+            
+            for elem in range(int(self.objs_state.res_max_len)): 
+                if tg[0, elem] == 0: 
+                    length_shift += 1
+                    for row in range(start_row, end_row + 1): 
+                        ng[row, 0:11] = np.roll(tg[row, 0:11], length_shift, axis=0)
+                        break
+                else: 
+                    pass 
+                        
+                    
+        return(ng)
+        
+
+"""
 env = ClusterEnv(set_length=70)
 
 grid = env.filled
@@ -193,6 +211,25 @@ new = env.updateState(8, grid)
 
 newer = env.updateState(0, new)
 new2 = env.updateState(2, newer)
-plt.matshow(new2, cmap=plt.get_cmap('gray_r'))
+
+new3 = env.updateState(5, new2)
+
+new4 = env.updateState(7, new3)
+
+new5 = env.updateState(9, new4)
+
+
+new6 = env.updateState(1, new5)
+
+new7 = env.updateState(0, new6)
+
+new8 = env.updateState(8, new7)
+new9 = env.updateState(10, new8)
+
+new10 = env.updateState(2, new9)
+
+
+plt.matshow(new10, cmap=plt.get_cmap('gray_r'))
 plt.axis('off')
 plt.show()
+"""
