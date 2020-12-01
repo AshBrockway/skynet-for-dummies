@@ -84,7 +84,7 @@ class ClusterEnv:
                 for elem in range(int(self.objs_state.res_max_len)):
                     # then move forward in time
                     if last_grid[start_row,elem]==0: 
-                        if (int(self.objs_state.res_max_len) - elem) < len(self.past_jobs[job_choice][1][resource]):
+                        if (int(self.objs_state.res_max_len) - elem) < len(self.objs_state.jobs_subset[job_choice][1][resource]):
                             stop = True
                             break 
                         else: 
@@ -225,7 +225,7 @@ grid = env.filled
 
 new = env.updateState(8, grid)
 
-"""
+
 new2 = env.updateState(2, new)
 
 new3 = env.updateState(0, new2)
@@ -256,11 +256,11 @@ new14 = env.updateState(1, new13)
 
 
 new15 = env.updateState(0, new14) 
-"""
 
 
+
 """
-plt.matshow(new, cmap=plt.get_cmap('gray_r'))
+plt.matshow(new15, cmap=plt.get_cmap('gray_r'))
 plt.axis('off')
 plt.show()
 """
