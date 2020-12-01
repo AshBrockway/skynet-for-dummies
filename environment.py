@@ -49,6 +49,7 @@ class ClusterEnv:
             
     
     def updateState(self, job_choice, last_grid):
+        schedule_job = 1 
         
         stop = False 
         # given that the void action is chosen we just keep the same grid and move on in time
@@ -100,11 +101,14 @@ class ClusterEnv:
                     
             if stop: 
                 new_grid = last_grid 
-                del self.past_jobs[schedule_job[2][0]]
+                if job_choice == 0: 
+                    pass
+                else: 
+                    del self.past_jobs[schedule_job[2][0]]
             
         # feed the last job choice to the choice list even if that choice was a void job or a break given that the break rewrote the choice 
         self.choice_list.append(job_choice)
-        
+        print(self.choice_list)
         # stop will be true when there is a void action or when the agen choses the void action 
         if stop: 
             # update time 
@@ -216,7 +220,7 @@ class ClusterEnv:
         for i in choices: 
             taken.append(self.count + self.jobs_profile[i][0][-1])
         
-        print(taken)
+       
         return(taken)
 
 env = ClusterEnv(set_length=70)
@@ -255,12 +259,11 @@ new13 = env.updateState(8, new12)
 new14 = env.updateState(1, new13) 
 
 
-new15 = env.updateState(0, new14) 
+#new15 = env.updateState(0, new14) 
 
 
 
-"""
-plt.matshow(new15, cmap=plt.get_cmap('gray_r'))
+
+plt.matshow(new14, cmap=plt.get_cmap('gray_r'))
 plt.axis('off')
 plt.show()
-"""
