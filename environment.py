@@ -9,9 +9,6 @@ Overview of RL Parts:
     2. Choose action using strategy
     3. Act according to choice
     4. Receive Reward or Penalty
-    5. Learn from experience
-    6. Iterate until strategy is optimal based on loss
-
 """
 
 from parameters import TuneMe as pa
@@ -23,13 +20,7 @@ import numpy as np
 
 class ClusterEnv:
     def __init__(self, set_length):
-        """
-         Pull from 2 other files :
-            1. the parameters of our environment
-                a. These create a class based on all the stuff we want to be available
-                to easily change and access
-            2. jobs that are entering our environment
-        """
+        
 
         # Construction of empty state
         self.objs_state = pa()
@@ -46,190 +37,230 @@ class ClusterEnv:
 
         # Populate the empty state with the jobs
         self.filled = self.objs_state.fill(self.jobs_profile, self.obs_state)
+        self.backlog_keys = self.objs_state.backlog_subset.keys() 
+        self.que_keys = self.objs_state.jobs_subset.keys() 
         self.past_jobs = {}
         self.choice_list = []
-        self.count = 0 
-    
-    def updateState(self, job_choice, last_grid, stop=False):
+        self.count  = 0
+        self.rewards = {} 
         
+        for keys in self.que_keys: 
+                self.objs_state.jobs_subset[keys].append([keys])
+            
+    
+    def updateState(self, job_choice, last_grid):
+        
+        stop = False 
+        # given that the void action is chosen we just keep the same grid and move on in time
         if job_choice==0: 
             new_grid = last_grid
             stop = True
         else: 
             
-            schedule_job = self.jobs_profile[job_choice]
-            self.past_jobs[job_choice] = schedule_job
+            # our schedule job consists of a list of information about that job form the job queue 
+            schedule_job = self.objs_state.jobs_subset[job_choice]
+           
+            self.past_jobs[schedule_job[2][0]] = schedule_job 
+            
+            
+            # we start by setting the new grid equal to the last grid to have a skeleton to work with 
             new_grid = last_grid
-        
+            
+            if job_choice==1:
+                old_start_col = 13
+            else:
+                old_start_col = int(self.objs_state.res_max_len) + 1 +(int(self.objs_state.job_res_max) * (job_choice - 1)) + (job_choice - 1)
+            
+            self.past_jobs[schedule_job[2][0]].append([old_start_col])
+            
+            
+             # for each resrouces profile list 
             for resource in range(self.objs_state.res_num): 
                 
+                # get the rows 
                 start_row = int((resource * self.objs_state.time_dim) + (resource * 2))
                 end_row = int(start_row + schedule_job[0][-1])
-            
-                if job_choice==1:
-                    old_start_col = int(self.objs_state.res_max_len) + 1
-                    self.past_jobs[job_choice].append([old_start_col])
-                else:
-                    old_start_col = int(self.objs_state.res_max_len) + 1 +(int(self.objs_state.job_res_max) * (job_choice - 1)) + (job_choice - 1)
-                    self.past_jobs[job_choice].append([old_start_col])
                 
                 for elem in range(int(self.objs_state.res_max_len)):
-            
                     # then move forward in time
                     if last_grid[start_row,elem]==0: 
                         if (int(self.objs_state.res_max_len) - elem) < len(self.past_jobs[job_choice][1][resource]):
-                            new_grid = last_grid 
-                            job_choice = "B" 
                             stop = True
-                        else:
+                            break 
+                        else: 
+                            if job_choice==1:
+                                old_start_col = int(self.objs_state.res_max_len) + 1
+                            else:
+                                old_start_col = int(self.objs_state.res_max_len) + 1 + (int(self.objs_state.job_res_max) * (job_choice - 1)) + (job_choice - 1)
+                    
                             for row in range(start_row, end_row):
-                                new_grid[row, elem:elem + len(self.past_jobs[job_choice][1][resource])] = schedule_job[1][resource]
+                                new_grid[row, elem:elem + len(schedule_job[1][resource])] = schedule_job[1][resource]
                                 new_grid[row, old_start_col:old_start_col + int(self.objs_state.job_res_max)] = [0 for x in range(int(self.objs_state.job_res_max))] 
-                                
-                
-                        break
-                
-                if stop: 
-                    break
-                
+                            break 
+                    
+            if stop: 
+                new_grid = last_grid 
+                del self.past_jobs[schedule_job[2][0]]
+            
+        # feed the last job choice to the choice list even if that choice was a void job or a break given that the break rewrote the choice 
         self.choice_list.append(job_choice)
+        
+        # stop will be true when there is a void action or when the agen choses the void action 
         if stop: 
-            self.job_choi = self.choice_list[-1]
-            self.choice_list.append("T")
-            new_grid = self.updateTime(new_grid2=new_grid) 
-            self.count += 1
-            # call update time
+            # update time 
+            new_grid = self.updateTime(new_grid2=new_grid)
+            # calculate rewards 
+            self.rewards[self.count]= self.getReward(self.choice_list)
+            #self.rewards[]
+            # erase past choices after time steps and rewards are finished 
+            self.choice_list = []
+            
 
         return(new_grid)
     
     def updateTime(self, new_grid2):
-        time_grid = new_grid2
-        start_col = 0 
-        end_col = int(self.objs_state.res_max_len) - 1
+        self.count += 1
+        self.taken = {}
+        time_grid = self.obs_state
         
-        res1_start_row = 0 
-        res1_end_row = 21
+        time_grid[0:18, 0:11] = new_grid2[1:19, 0:11]
         
-        res2_start_row = 22
-        res2_end_row = 40
+        time_grid[22:39, 0:11] = new_grid2[23:40, 0:11]
+        time_grid[0:40, 12:84] = new_grid2[0:40, 12:84]
+
+        mid_grid = self.shiftCurrent(time_grid) 
         
-        time_grid[res1_start_row:res1_end_row - 1, start_col:end_col] = new_grid2[res1_start_row + 1:res1_end_row, start_col:end_col]
+        moved_grid = mid_grid
         
-        time_grid[res2_start_row:res2_end_row - 1, start_col:end_col] = new_grid2[res2_start_row + 1: res2_end_row, start_col:end_col]
-        
-        mid_grid = self.shiftCurrent(time_grid)         
-        stp = 1
+        c = 1 
         for i in self.choice_list:
-            choice = i
-            moved_grid = mid_grid 
-            if self.count < 2: 
-                if choice=="T" or choice=="B" or choice==0:
-                    pass
-                else: 
-                    moved_grid = self.moveFromBack(mid_grid, i)
-                    break
+            if i==0:
+                del self.choice_list[c-1]
             else: 
-                if choice !="T" or choice != "B" or choice==0:
-                    pass
-                else: 
-                    stp += 1 
-                    if stp < self.count: 
-                        pass 
-                    else: 
-                        moved_grid = self.moveFromBack(mid_grid, i)
-                        break
-           
-    
+                moved_grid = self.moveFromBack(mid_grid, i, c)
+                
+            c += 1 
         if len(self.objs_state.backlog_subset.keys()) > 41 :
-                pass
+            pass
         else: 
-            moved_grid[41 - stp - 1: 41, -1] = [0 for vali in range(41-stp-1, 41)]
+            moved_grid[41 - len(self.choice_list) - 1: 41, -1] = [0 for vali in range(42-len(self.choice_list), 41)]
+        
         return(moved_grid)
 
-    def moveFromBack(self, tg, jc):
+    def moveFromBack(self, tg, jc, cn):
         moved_stuff = tg
-        newie = self.objs_state.backlog_subset[(len(self.past_jobs.keys()) + 10)]
+        newie = self.objs_state.backlog_subset[(len(self.past_jobs.keys()) + 10) + cn]
+        nk = (len(self.past_jobs.keys()) + 10)
         del self.objs_state.jobs_subset[jc]
         
         self.objs_state.jobs_subset[jc] = newie
-        del self.objs_state.backlog_subset[(len(self.past_jobs.keys()) + 10)]
+        self.objs_state.jobs_subset[jc].append([nk])
         
-        empty_job_start_col = self.past_jobs[jc][2][0]
-        times = int(self.objs_state.jobs_subset[jc][0][-1])
-               
-        res1_new_start_row = 0 
-        res1_new_end_row = times 
-            
-        res2_new_start_row = 22
-        res2_new_end_row = 22 + times 
-            
-        
-        resources = [0, 1]
-        
+     
+        empty_job_start_col = int(self.objs_state.res_max_len) + 1 +(int(self.objs_state.job_res_max) * (jc - 1)) + (jc - 1)
         
         end_col_r1 = empty_job_start_col + len(self.objs_state.jobs_subset[jc][1][0])
         end_col_r2 = empty_job_start_col + len(self.objs_state.jobs_subset[jc][1][1])
         
-        stuff = [[res1_new_start_row,res1_new_end_row, end_col_r1], [res2_new_start_row,res2_new_end_row, end_col_r2]]
+        time = int(self.objs_state.jobs_subset[jc][0][-1])
         
-        for res in resources: 
-            sr = stuff[res*1][0] 
-        
-            for t in range(times): 
-                  moved_stuff[sr + t, empty_job_start_col:stuff[res][2]] = np.array(self.objs_state.jobs_subset[jc][1][res])
-                  
+        for r in range(time):
+            moved_stuff[r, empty_job_start_col:end_col_r1] = np.array(self.objs_state.jobs_subset[jc][1][0])
+            moved_stuff[22 + r, empty_job_start_col:end_col_r2] = np.array(self.objs_state.jobs_subset[jc][1][1])
         
         return(moved_stuff)
     
     def shiftCurrent(self, tg): 
         ng = tg
-        for resource in range(2): 
-            length_shift = 0 
-            start_row = int((resource * self.objs_state.time_dim) + (resource * 2))
-            end_row = int(start_row + self.objs_state.time_dim)
+        
+        
+        val_r1 = tg[0:20, 0:11]
+        val_r2 = tg[21:41, 0:11]
+        
+        
+        
+        for row1 in range(20): 
+            n_0s1 = [] 
+            n_val1 = []
             
-            for elem in range(int(self.objs_state.res_max_len)): 
-                if tg[0, elem] == 0: 
-                    length_shift += 1
-                    for row in range(start_row, end_row + 1): 
-                        ng[row, 0:11] = np.roll(tg[row, 0:11], length_shift, axis=0)
-                        break
+            for v1 in val_r1[row1,0:11]: 
+                if v1==0: 
+                    n_0s1.append(v1)
                 else: 
-                    pass 
-                        
-                    
+                    n_val1.append(v1)
+            
+            ng[row1, 0:len(n_val1)] = n_val1
+            ng[row1, len(n_val1):11] = n_0s1
+        
+        
+        for row2 in range(20): 
+            n_0s2 = [] 
+            n_val2 = []
+            
+            for v2 in val_r2[row2,0:11]: 
+                if v2==0: 
+                    n_0s2.append(v2)
+                else: 
+                    n_val2.append(v2)
+                
+            
+            ng[row2 + 21, 0:len(n_val2)] = n_val2
+            ng[row2 + 21, len(n_val2):11] = n_0s2
+            
+          
         return(ng)
         
+    def getReward(self, choices): 
+        taken = []
+        
+        for i in choices: 
+            taken.append(self.count + self.jobs_profile[i][0][-1])
+        
+        print(taken)
+        return(taken)
 
-"""
 env = ClusterEnv(set_length=70)
 
 grid = env.filled
 
 new = env.updateState(8, grid)
 
+"""
+new2 = env.updateState(2, new)
 
-newer = env.updateState(0, new)
-new2 = env.updateState(2, newer)
+new3 = env.updateState(0, new2)
 
-new3 = env.updateState(5, new2)
+new4 = env.updateState(3, new3) 
 
-new4 = env.updateState(7, new3)
+new5 = env.updateState(4, new4) 
 
-new5 = env.updateState(9, new4)
+new6 = env.updateState(9, new5) 
 
+new7 = env.updateState(0, new6) 
 
-new6 = env.updateState(1, new5)
+new8 = env.updateState(9, new7) 
 
-new7 = env.updateState(0, new6)
+new9 = env.updateState(3, new8) 
 
-new8 = env.updateState(8, new7)
-new9 = env.updateState(10, new8)
-
-new10 = env.updateState(2, new9)
+new10 = env.updateState(6, new9) 
 
 
-plt.matshow(new10, cmap=plt.get_cmap('gray_r'))
+new11 = env.updateState(0, new10) 
+
+new12 = env.updateState(5, new11) 
+
+new13 = env.updateState(8, new12) 
+
+
+new14 = env.updateState(1, new13) 
+
+
+new15 = env.updateState(0, new14) 
+"""
+
+
+"""
+plt.matshow(new, cmap=plt.get_cmap('gray_r'))
 plt.axis('off')
 plt.show()
 """
