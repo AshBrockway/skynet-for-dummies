@@ -55,7 +55,7 @@ def curried_valuation(length_of_longest_trajectory):
         out[-1] = x[-1]
         for i in reversed(range(len(x)-1)): #go backwards
             out[i] = x[i] + gamma*out[i+1] #this step valuation = reward + gamma*next_step_valuation
-        assert x.ndim >= 1
+        #assert x.ndim >= 1
         return out
     return valuation
 
@@ -96,34 +96,26 @@ class DPN:  #ANN with Pytorch
             jobs = self.env.make_starting_states(resource_constraints, time) #this would be a list of starting states
             self.train_on_jobs(jobs, optimizer)
 
-    def predict(self, state):
-        '''
-        The forward pass of the network on the given state. Returns the output probabilites for taking the OUTPUT_SIZE probabilites
 
-        might already be defined from the initialization after defining your model
-
-        TODO: Rename to forward(self, state), and output appropriate pytorch SHIT
-        '''
-        pass
-
-
-    def trajectory(self, current_state, refresh_defaults = True, output_history = []):
+    def trajectory(self, current_state):
         '''
         Maybe this implementation doesn't utilize GPUs very well, but I have no clue or not.
 
         Final output looks like:
         [(s_0, a_0, r_0), ..., (s_L, a_L, r_l)]
         '''
-        if refresh_defaults:
-            output_history = []
-        probs = self.forward(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
-        picked_action = Categorical(probs).sample() #returns index of the action/job selected.
-        #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
-        new_state, reward = self.env.state_and_reward(current_state, picked_action) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
-        output_history.append( (current_state, picked_action, reward) )
-        if new_state is None: #essentially, you died or finished your trajectory
-            return output_history
-        return  self.trajectory(new_state, False, output_history)
+        output_history = []
+        while True:
+            probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
+            picked_action = Categorical(probs).sample() #returns index of the action/job selected.
+            #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
+            new_state, reward = self.env.state_and_reward(current_state, picked_action) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
+            output_history.append( (current_state, picked_action, reward) )
+            if new_state is None: #essentially, you died or finished your trajectory
+                break
+            else:
+                current_state = new_state
+        return output_history
 
     def train_on_jobs(self,jobset, optimizer):
         '''
@@ -143,7 +135,7 @@ class DPN:  #ANN with Pytorch
             # Now we need to make the valuations
             longest_trajectory = max(len(episode) for episode in episode_array)
             valuation_fun = curried_valuation(longest_trajectory)
-            cum_values = np.array(map(episode_array, valuation_fun)) #should be a EPISODESxlength sized
+            cum_values = np.array([valuation_fun(ep) for ep in episode_array]) #should be a EPISODESxlength sized
             #can compute baselines without a loop?
             baseline_array = np.array([sum(cum_values[:,i])/EPISODES for i in range(longest_trajectory)]) #Probably defeats the purpose of numpy, but we're essentially trying to sum each valuation array together, and then divide by the number of episodes TODO make it work nicely
             for i in range(EPISODES): #swapped two for loops
@@ -153,7 +145,7 @@ class DPN:  #ANN with Pytorch
                     except IndexError: #this occurs when the trajectory died
                         break
                     #get probabilities from the network. We already did this, but pretty sure we gotta do it again.
-                    probs = self.forward(state)
+                    probs = self.predict(state)
                     DPN_Theta = Categorical(probs) #Pytorch distribution for Categorical classes. SHOULD connect to the network to update weights.
                     if i == 0 and t == 0: #Define the first loss in the sum
                         loss = -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action)
