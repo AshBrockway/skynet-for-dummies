@@ -108,18 +108,18 @@ class ClusterEnv:
             
         # feed the last job choice to the choice list even if that choice was a void job or a break given that the break rewrote the choice 
         self.choice_list.append(job_choice)
-        print(self.choice_list)
         # stop will be true when there is a void action or when the agen choses the void action 
         if stop: 
             # update time 
             new_grid = self.updateTime(new_grid2=new_grid)
             # calculate rewards 
-            self.rewards[self.count]= self.getReward(self.choice_list)
-            #self.rewards[]
+            self.rewards = self.getReward(self.choice_list)
+            
             # erase past choices after time steps and rewards are finished 
             self.choice_list = []
+        else: 
+            self.reward = 0
             
-
         return(new_grid)
     
     def updateTime(self, new_grid2):
@@ -136,24 +136,30 @@ class ClusterEnv:
         
         moved_grid = mid_grid
         
-        c = 1 
-        for i in self.choice_list:
-            if i==0:
-                del self.choice_list[c-1]
-            else: 
-                moved_grid = self.moveFromBack(mid_grid, i, c)
+        if len(self.past_jobs.keys()) < 60:
+            c = 0
+    
+            for i in self.choice_list:
+                if i==0:
+                    del self.choice_list[c]
+                else: 
+                    moved_grid = self.moveFromBack(mid_grid, i, c)
                 
-            c += 1 
-        if len(self.objs_state.backlog_subset.keys()) > 41 :
-            pass
-        else: 
-            moved_grid[41 - len(self.choice_list) - 1: 41, -1] = [0 for vali in range(42-len(self.choice_list), 41)]
+                c += 1 
         
+            if len(self.objs_state.backlog_subset.keys()) > 41 :
+                pass
+            else: 
+                moved_grid[41 - len(self.choice_list) - 1: 41, -1] = [0 for vali in range(42-len(self.choice_list), 41)]
+        else: 
+            moved_grid = mid_grid 
+            
         return(moved_grid)
 
     def moveFromBack(self, tg, jc, cn):
         moved_stuff = tg
-        newie = self.objs_state.backlog_subset[(len(self.past_jobs.keys()) + 10) + cn]
+        
+        newie = self.objs_state.backlog_subset[(len(self.past_jobs.keys()) + 10)]
         nk = (len(self.past_jobs.keys()) + 10)
         del self.objs_state.jobs_subset[jc]
         
@@ -223,6 +229,7 @@ class ClusterEnv:
        
         return(taken)
 
+"""
 env = ClusterEnv(set_length=70)
 
 grid = env.filled
@@ -267,3 +274,4 @@ new14 = env.updateState(1, new13)
 plt.matshow(new14, cmap=plt.get_cmap('gray_r'))
 plt.axis('off')
 plt.show()
+"""
