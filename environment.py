@@ -38,11 +38,12 @@ class ClusterEnv:
         self.obs_state = objs_state.getGrid()
 
         # percent of long jobs
-        pct_lj = .2
+        self.pct_lj = objs_state.getLong()
 
         # Grab some jobs
-        jobs = jg(pct_lj, ["cpu", "gpu"])
-        # jobs_profile is the values themselfs, log is the string info about the jobs
+        jobs = jg(self.pct_lj, ["cpu", "gpu"])
+
+        # jobs_profile is the values themselves, log is the string info about the jobs
         self.jobs_profile, self.jobs_log = jobs.getJobs(set_length)
 
         # Populate the empty state with the jobs
@@ -59,3 +60,4 @@ env = ClusterEnv(10)
 
 
 print(env.filled)
+print()

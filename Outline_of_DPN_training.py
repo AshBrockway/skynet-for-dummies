@@ -13,10 +13,11 @@ Most important is the train_on_jobs method for updating the weights of the netwo
 
 
 import numpy as np
-from random
+import random
+import torch
 from torch.distributions import Categorical
-from torch import optim
-
+from torch import nn, optim
+from parameters import TuneMe as pa
 
 ITERATIONS = 1000 #kinda like epochs?
 BATCH_SIZE = 10   #Might be the exact same thing as episodes, up for interpretation.
@@ -54,7 +55,7 @@ def curried_valuation(length_of_longest_trajectory):
 
 
 class DPN:#(keras_module or whatever):
-    def __init(self)__:
+    def __init__(self,):
         #Super(self, __init__) #Initialize base methods of keras NN module stuff?
         '''
         define your shit about the NN stuff initial weights, architecture, and so forth
@@ -69,6 +70,54 @@ class DPN:#(keras_module or whatever):
 
         all caps words are hyperparameters you would set.
         '''
+
+
+        params = pa()
+        # get number of jobs
+        self.jobs = params.getNumJobs()
+        print("Jobs = " + str(self.jobs))
+
+        input_features = np.array()
+        target_output = np.array()
+        target_output = target_output.reshape()
+        weigths = np.array()
+
+        bias = 0.3
+        lr = 0.05
+
+        def sigmoid(x):
+            return 1/(1+np.exp(-x))
+        def sigmoid_der(x):
+            return sigmoid(x)*(1-sigmoid(x))
+
+        for epoch in range(10000):
+            inputs = input_features
+            pred_in = np.dot(input, weights) + bias
+            pred_out = sigmoid(pred_in)
+            error = pred_out - target_output
+            x = error.sum()
+
+            print(x)
+
+            dcost_dpred = error
+            dpred_dx = sigmoid_der(pred_out)
+
+            z_delta = dcost_dpred * dpred_dx
+
+            inputs = inputs_features.T
+            weights -= lr * np.dot(inputs, z_delta)
+
+            for i in z_delta:
+                    bias -= lr * i
+
+        single_point = n.array()
+        result1 = np.dot(single_point, weights) + bias
+
+        result2 = sigmoid (result1)
+
+        print(result2)
+
+
         self.prob_history = {} #Might be a dumb idea, but it stores the probability that the network chose the action given the state?
                                # key looks like (state, action) value is the probability? marked with optional1
     def train(self, ITERATIONS):
@@ -151,3 +200,5 @@ class DPN:#(keras_module or whatever):
                         loss += -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action) #This is what it _should_ look like in pytorch. Added negative (trying to maximize reward, but we're trying to find a minimum) on recommendation of pytorch documentation: https://pytorch.org/docs/stable/distributions.html
         loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
         optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
+
+DPN()
