@@ -29,22 +29,26 @@ T8  0 0 0 0 0 0 0 0 0 0 0 | 0 0 0 0 0 0 | ... | 0 0 0 0 0 0        |       0
 T9  0 0 0 0 0 0 0 0 0 0 0 | 0 0 0 0 0 0 | ... | 0 0 0 0 0 0        |       0
 T10 0 0 0 0 0 0 0 0 0 0 0 | 0 0 0 0 0 0 | ... | 0 0 0 0 0 0        |       0
 
-The itial object will be a matrix of 0s, including 0 padding between rows for different resources and columns of different jobs
+The initial object will be a matrix of 0s, including 0 padding between rows for different resources and columns of different jobs
 
 The fill method will fill the grid with the job profiles from the jobs.py file #
 """
 import numpy as np
-import random as rand
 from job import JobGrabber as jg
 import matplotlib.pyplot as plt
 from DBconnect import *
 
 
 class TuneMe:
+    """
+    The point of this object is to store aspects of the system that can be tweaked for different training iterations.
+    The basis of the parameters are to help form the basis for our environmental representation shown in the doc string at the beginning of this file
+    """
     def __init__(self):
 
         ##The below parameters are tuneable. Update with care!!
         # empty grid creation
+
         self.time_dim = 15
         # number of jobs in queue, or the amount of jobs that are rendering in the observed state (1 less than expected python stuff)
         self.queue_len = 6
@@ -105,14 +109,15 @@ class TuneMe:
         return jobs
 
     def getGrid(self):
-        # take the number of rows with time_dim and add an row for each resource
+        # take the number of rows with time_dim times the number of resources as well as one row to pad between resrouces given that the is >1 resources
         height = int((self.time_dim * self.res_num) + (self.res_num - 1))
         # add the max resource length, the number of jobs in queue times the number of squares in the resources row plus
         # # the number of jobs in the queues (i.e. the columns between jobs) and 2 more colunms for the backlog and white space in between
         width = int(self.res_max_len + (self.queue_len * self.job_res_max) + self.queue_len + 2)
 
-        # create a list of lists created from 0s
+        # create the shell of one column of the grid (basically a list of 0s the length of the height calculated above)
         empty_grid = [0 for x in range(height)]
+        # For each row, laid out in the shell line above, fill out 0s across the columns whose dimension is set with the width calculation above
         for i in range(height):
             # creates a list of 0s using the width of the grid
             empty_grid[i] = [0 for x in range(width)]
@@ -121,13 +126,23 @@ class TuneMe:
         empty_grid = np.array(empty_grid, dtype=float)
         return(empty_grid)
 
-    # Here I fill the jobs ............................
-    # TODO (@ash) create iterative method to place values in Grid elements keeping padding in mind
+    # this method is to fill the empty grid created with the getGrid method of this file with jobs we generate using the JobGrabber in the jobs file
+    # # The filled grid takes a jobset and a empty grid as
+    
     def fill(self, jobs, empty_grid):
         # subset the job list to only include the jobs for subset M (length defined above)
-        self.jobs_subset = jobs[:self.queue_len]
-        backlog = jobs[(self.queue_len + 1):]
+        for kye, val in jobs.items():
+            p_list = self.getProgList(val)
+            jobs[kye].append(p_list)
+        
+        self.jobs_subset = {key1: value1 for key1, value1 in jobs.items() if int(key1) < int(self.queue_len) + 1}
+        self.backlog_subset = {keyb: valueb for keyb, valueb in jobs.items() if int(keyb) > int(self.queue_len)}
+        
+        height = (int(self.time_dim) * int(self.res_num)) + (int(self.res_num) - 1)
         grid = empty_grid.astype(float)
+        
+        # Creation of dictionary to hold job information 
+        
         """
             The Grid must be filled. Components of this filling are:
                 1. Backlog count
@@ -137,59 +152,68 @@ class TuneMe:
                     b. For each Job in queue:
                         i. Fill out the % usage in the # of rows associated with their time
         """
-        # Now start with the easy part, place the # of jobs in the backlog in the top right element of the grid
-        #grid[0, -1] = len(backlog)
-        grid[0, -1] = 1 
+        # Now start with the easy part, place the # of jobs in the backlog in the last column of the grid
+        if len(self.backlog_subset.keys()) < height: 
+            grid[0:len(self.backlog_subset.keys()), -1] = [1 for x in range(self.backlog_subset.keys())]
+        else:
+            grid[0:(height), -1] = [1 for x in range(height)]
+
+        
         job_count = -1
-        
-        for job in self.jobs_subset:
+
+        for job, infor in self.jobs_subset.items():
             job_count += 1
-            print(job)
+
             # using the # job being visualized, we find the starting index of the grid, given our rows, to start filling at
-            if job_count < 1: 
-                start_col = int(self.res_max_len) + 1 
-                
-            else: 
+            if job_count < 1:
+                start_col = int(self.res_max_len) + 1
+
+            else:
                 start_col = int(self.res_max_len) + 1 + (int(self.job_res_max) * job_count) + job_count
-                
-        
+
+
             for resource in range(self.res_num):
+                end_col = len(infor[1][resource]) + start_col
+                # all rows that should be filled given a job's time duration
+                start_row = int((resource * self.time_dim) + (resource * 2))
+                end_row = int(infor[0][-1]) + start_row
+
+                for row in range(start_row, end_row):
+                    grid[row, start_col:end_col] = infor[1][resource]
+               
+               
+        return(grid)
+
+    def getProgList(self, jobi):
+        
+        job_prog_list = [[0] for x in range(self.res_num)]
+        
+        for res in range(self.res_num): 
+            res_use = float(self.res_max_len) * jobi[0][int(res)]
+            partial_use = res_use % 1 
+            count_full_elements = float(res_use - partial_use)
             
-                # all rows that should be filled given a job's time duration 
-                start_row = int((resource * self.time_dim) + (resource * 2)) 
-                end_row = int(job[-1]) + start_row 
-                
-                # get the percent of the max resource being used by this job 
-                res_use = self.res_max_len * job[resource]
-                partial_res_use = res_use % 1
-                count_full_elements = int(res_use - partial_res_use)
-                
-                if count_full_elements != 0: 
-                    
-                    full_val = np.repeat(1, count_full_elements)
-                    prog_list = np.append(full_val, [float(partial_res_use)])
-                    for row in range(start_row, end_row):
-                        grid[row, start_col:(start_col + count_full_elements + 1)] = prog_list
-                else: 
-                    prog_list = float(partial_res_use)
-                    for row in range(start_row, end_row):
-                        grid[row, start_col] = prog_list
-                    
-      
-        return(grid, backlog)
-
+            full_val = np.repeat(1, count_full_elements)
+            if partial_use != 0: 
+                prog_list = np.append(full_val, [float(partial_use)])
+            else: 
+                prog_list = full_val
+            
+            job_prog = list(prog_list)
+        
+            job_prog_list[res] = job_prog
+        return(job_prog_list)
+# Testing
+"""
 pa = TuneMe()
-
 emptyGrid = pa.getGrid()
-
 grabber = jg(.2, ['cpu', 'gpu'])
+jobsset, jobs_log = grabber.getJobs(set_num=70)
+ggrid = pa.fill(jobsset, emptyGrid)
 
-jobsset, jobs_log = grabber.getJobs(set_num=10)
-
-filed, backlog = pa.fill(jobsset, emptyGrid)
-
-plt.matshow(filed, cmap=plt.get_cmap('gray_r'))
+plt.matshow(ggrid, cmap=plt.get_cmap('gray_r'))
 plt.axis('off')
+
 
 #plt.show()
 # print(emptyGrid)
@@ -201,3 +225,4 @@ plt.axis('off')
 # print(values)
 #connect to database to update parameters
 #DBconnect.updateparams(values)
+

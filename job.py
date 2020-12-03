@@ -1,13 +1,12 @@
 """
 Author: Ashley Brockway, ashley.brockway15@ncf.edu
-Date: 9/30/20
+Date: 9/30/20-11/11/2020
+
 Purpose:
 The purpose of this file is to produce a job set with a specified number of jobs.
 
 Description:
-The purpose is to take an input of the length of a jobset to be constructed for
-1 episode of training. One job will consist of both a time duration and a resource vector.
-The dimensions of the resource vector are stored in parameters.py in the var. res_num.
+The purpose is to take an input of the length of a jobset to be constructed for training. One job will consist of both a time duration and a resource vector. The dimensions of the resource vector are stored in parameters.py in the var. res_num.
 
 For DeepRM the resource vector will have 2 elements and look like this:
     (r_1, r_2)
@@ -17,11 +16,12 @@ But wait, you are probably wondering how we will get values of r_1 and r_2, ther
 Meaning a set of 3 jobs will look like this:
 
     Job 1:  ((r_{1,1} , r_{1, 2}), T_{1})
-    Job 2:  ((r_{2,1} , r_{2, 2}), T_{1})
-    Job 3:  ((r_{3,1} , r_{3, 2}), T_{1})
+    Job 2:  ((r_{2,1} , r_{2, 2}), T_{2})
+    Job 3:  ((r_{3,1} , r_{3, 2}), T_{3})
 
 Because of the job method including that the set be 20% long time duration and 80% short time duration, and randomly choose which resource would be domination (dominant: [0.25, .50], non-dominant: [.05, .10]) a log will be kept.
 
+The job profiles sets (the numerical values of their information) and info sets (the string form description of the jobs) are stored in dictionary where the 
 """
 
 import numpy as np
@@ -35,14 +35,10 @@ class JobGrabber:
     The parameters in the constructor for this class are:
         lt_prop: the proportion of long time durations
         resource_list: a list of the string names of the resources
-    The JobGrabber class utlizes the Job class within its getJobs method to combine a set of job's
-    resource and time profiles.
-
-    jobs is the resource and time profiles of the jobset.
+    The JobGrabber class utlizes the Job class within its getJobs method to combine a set of job's resource vector and time profile.
     And jobs_info is the job log with information on the ratio and dominant resource of a given job.
-
-
     """
+
     def __init__(self, lt_prop, resource_list):
 
         # time duration ratio
@@ -56,9 +52,13 @@ class JobGrabber:
     # Method to get a job of set_num length, meaning set_num=#of jobs in set
     def getJobs(self, set_num):
         # Create lists of 0 that match the specified number of jobs for job profiles and logs
-        jobs = [ 0 for x in range(set_num) ]
-        jobs_info = [ 0 for x in range(set_num) ]
+        #jobs = [ 0 for x in range(set_num) ]
+        #jobs_info = [ 0 for x in range(set_num) ]
 
+        jobs = {}
+        jobs_info = {}
+        jobsd = {}
+        jobs_infod = {}
         # For set_num iterations:
         for i in range(set_num):
             # randomly choose one of the resources to be dominant
@@ -72,19 +72,27 @@ class JobGrabber:
                 job_ob = Job(True, dom_ress, self.res_list)
 
             # then for each job fill the jobs and the job_info list
-            jobs[i] = job_ob.job_info
-            jobs_info[i] = job_ob.job_data
+            jobs[i + 1] = [job_ob.job_info]
+            jobs_info[i + 1] = [job_ob.job_data]
 
         # shuffle the jobs so that their order isnt defined off their time duration
-        jobs, jobs_info = shuffle(jobs, jobs_info)
-       
+        jobs_list = list(jobs.items())
+        jobs_info_list = list(jobs_info.items())
+        zipped = list(zip(jobs_list, jobs_info_list))
+        rand.shuffle(zipped)
+        
+        list_jobs, list_info = zip(*zipped)
+        jobsd = dict(list_jobs)
+        jobs_infod = dict(list_info)
+        
+        target_keys = [key for key in range(1, set_num + 1)]
+        
+        jobsnd = dict(zip(target_keys, jobsd.values()))
+        jobs_infond = dict(zip(target_keys, jobs_infod.values()))
+        
+        #for nkey, numkey in zip(jobs
         # return the jobs and job_info lists made up of the profiles and the log info respectively
-        return(jobs, jobs_info)
-
-    # this is the string method to define what we will see when we want to print job class
-    # # TODO (@ash) understand how this works
-    # def __str__(self):
-        # pass
+        return(jobsnd, jobs_infond)
 
 
 
@@ -104,14 +112,14 @@ class Job:
         # enumerating the resource list, we check for whether the resource was chosen as dominant
         # # and then sample that resources usage
         for index, res in enumerate(res_list):
-            if res==dom_res[0]:
+            if res == dom_res[0]:
                 res_vec[index] = float(np.random.uniform(low=.25, high=.5, size=1))
                 # concat. strings to make a "this resource is dominant" entry in the log
                 uhhh = res + " is dominant"
                 self.job_data[index] = uhhh
             else:
                 res_vec[index] = float(np.random.uniform(low=.05, high=.1, size=1))
-                uhhh = res + " is not  dominant"
+                uhhh = res + " is not dominant"
                 self.job_data[index] = uhhh
 
         # Check the duration label for the given job
@@ -131,6 +139,7 @@ class Job:
 
 
 # for testing
+
 
 
 #job_0b = JobGrabber(.2, ["cpu", "gpu"])

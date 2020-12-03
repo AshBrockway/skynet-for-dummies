@@ -17,13 +17,18 @@ import random
 import torch
 from torch.distributions import Categorical
 from torch import nn, optim
+
 from parameters import TuneMe as pa
+
 
 ITERATIONS = 1000 #kinda like epochs?
 BATCH_SIZE = 10   #Might be the exact same thing as episodes, up for interpretation.
 EPISODES = 20     #How many trajectories to explore for a given job. Essentually to get a better estimate of the expected reward.
 DISCOUNT = 0.99   #how much to discount the reward
 ALPHA = 0.001     #learning rate?
+
+#TODO: WHAT IS GAMMA??? (used in valuation function, line 56(ish))
+gamma = .99
 
 def curried_valuation(length_of_longest_trajectory):
     '''
@@ -49,24 +54,32 @@ def curried_valuation(length_of_longest_trajectory):
         out[-1] = x[-1]
         for i in reversed(range(len(x)-1)): #go backwards
             out[i] = x[i] + gamma*out[i+1] #this step valuation = reward + gamma*next_step_valuation
-        assert x.ndim >= 1
+        #assert x.ndim >= 1
         return out
     return valuation
 
 
-class DPN:#(keras_module or whatever):
-    def __init__(self,):
-        #Super(self, __init__) #Initialize base methods of keras NN module stuff?
-        '''
-        define your shit about the NN stuff initial weights, architecture, and so forth
-        WE NEED TO FIGURE OUT HOW TO GET GRADIENT of log(policy(state, action))
-        Also allow weights to be updated through addition? Something like that.
+
+class DPN:  #ANN with Pytorch
+    def __init__(self, env):
+        self.n_inputs = len(env.flatten())
+        #TODO: Make outputs reflexive
+        self.n_outputs = 11
 
 
-        INPUT_SIZE = size and shape from the environment's output for a state  TODO
-        OUTPUT_SIZE = number of possible actions                               TODO
+        # Define network
+        self.network = nn.Sequential(
+            nn.Linear(self.n_inputs, 128),
+            nn.ReLU(),
+            nn.Linear(128, 32),
+            nn.ReLU(),
+            nn.Linear(32, self.n_outputs))
 
-        Probably include stuff to interact with the environment after inputting a class
+    def predict(self, state):
+        state = state.flatten()
+        action_probs = self.network(torch.FloatTensor(state))
+        return action_probs
+
 
         all caps words are hyperparameters you would set.
         '''
@@ -119,6 +132,7 @@ class DPN:#(keras_module or whatever):
 
 
         self.prob_history = {} #Might be a dumb idea, but it stores the probability that the network chose the action given the state?
+
                                # key looks like (state, action) value is the probability? marked with optional1
     def train(self, ITERATIONS):
         '''
@@ -135,34 +149,26 @@ class DPN:#(keras_module or whatever):
             jobs = self.env.make_starting_states(resource_constraints, time) #this would be a list of starting states
             self.train_on_jobs(jobs, optimizer)
 
-    def predict(self, state):
-        '''
-        The forward pass of the network on the given state. Returns the output probabilites for taking the OUTPUT_SIZE probabilites
 
-        might already be defined from the initialization after defining your model
-
-        TODO: Rename to forward(self, state), and output appropriate pytorch SHIT
-        '''
-        pass
-
-
-    def trajectory(self, current_state, refresh_defaults = True, output_history = []):
+    def trajectory(self, current_state):
         '''
         Maybe this implementation doesn't utilize GPUs very well, but I have no clue or not.
 
         Final output looks like:
         [(s_0, a_0, r_0), ..., (s_L, a_L, r_l)]
         '''
-        if refresh_defaults:
-            output_history = []
-        probs = self.forward(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
-        picked_action = Categorical(probs).sample() #returns index of the action/job selected.
-        #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
-        new_state, reward = self.env.state_and_reward(current_state, picked_action) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
-        output_history.append( (current_state, picked_action, reward) )
-        if new_state is None: #essentially, you died or finished your trajectory
-            return output_history
-        return  self.trajectory(new_state, False, output_history)
+        output_history = []
+        while True:
+            probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
+            picked_action = Categorical(probs).sample() #returns index of the action/job selected.
+            #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
+            new_state, reward = self.env.state_and_reward(current_state, picked_action) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
+            output_history.append( (current_state, picked_action, reward) )
+            if new_state is None: #essentially, you died or finished your trajectory
+                break
+            else:
+                current_state = new_state
+        return output_history
 
     def train_on_jobs(self,jobset, optimizer):
         '''
@@ -182,17 +188,17 @@ class DPN:#(keras_module or whatever):
             # Now we need to make the valuations
             longest_trajectory = max(len(episode) for episode in episode_array)
             valuation_fun = curried_valuation(longest_trajectory)
-            cum_values = np.array(map(episode_array, valuation_fun)) #should be a EPISODESxlength sized
+            cum_values = np.array([valuation_fun(ep) for ep in episode_array]) #should be a EPISODESxlength sized
             #can compute baselines without a loop?
             baseline_array = np.array([sum(cum_values[:,i])/EPISODES for i in range(longest_trajectory)]) #Probably defeats the purpose of numpy, but we're essentially trying to sum each valuation array together, and then divide by the number of episodes TODO make it work nicely
             for i in range(EPISODES): #swapped two for loops
                 for t in range(longest_trajectory):
                     try:
-                        state, action, reward = episodes_array[i][t]
+                        state, action, reward = episode_array[i][t]
                     except IndexError: #this occurs when the trajectory died
                         break
                     #get probabilities from the network. We already did this, but pretty sure we gotta do it again.
-                    probs = self.forward(state)
+                    probs = self.predict(state)
                     DPN_Theta = Categorical(probs) #Pytorch distribution for Categorical classes. SHOULD connect to the network to update weights.
                     if i == 0 and t == 0: #Define the first loss in the sum
                         loss = -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action)
