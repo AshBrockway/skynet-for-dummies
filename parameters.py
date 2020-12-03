@@ -36,7 +36,7 @@ The fill method will fill the grid with the job profiles from the jobs.py file #
 import numpy as np
 from job import JobGrabber as jg
 import matplotlib.pyplot as plt
-from DBconnect import *
+#from DBconnect import *
 
 
 class TuneMe:
@@ -49,9 +49,9 @@ class TuneMe:
         ##The below parameters are tuneable. Update with care!!
         # empty grid creation
 
-        self.time_dim = 15
+        self.time_dim = 20
         # number of jobs in queue, or the amount of jobs that are rendering in the observed state (1 less than expected python stuff)
-        self.queue_len = 6
+        self.queue_len = 10
         # resource capacities shown in the grid, think of filling these as usage_proportion*12
         self.res_max_len = 12
         # .5 units of resource is the max % of resource used by one job in current sample
@@ -91,6 +91,8 @@ class TuneMe:
         self.start_seed = np.random.uniform(low=1, high=1000000000, size=1)
         self.new_seed = np.random.uniform(low=-45, high=45, size=1) + self.start_seed
 
+
+    """
     def updateDB(self, to_update):
         if to_update == 'params':
             print("insides updateDB function in params")
@@ -99,7 +101,9 @@ class TuneMe:
             print(values)
             # connect to database to update parameters table
             DBconnect.updateparams(values)
+            """
 
+    """
     def getLong(self):
         long = self.long
         return long
@@ -107,6 +111,7 @@ class TuneMe:
     def getNumJobs(self):
         jobs = self.jobs
         return jobs
+    """
 
     def getGrid(self):
         # take the number of rows with time_dim times the number of resources as well as one row to pad between resrouces given that the is >1 resources
@@ -225,4 +230,4 @@ plt.axis('off')
 # print(values)
 #connect to database to update parameters
 #DBconnect.updateparams(values)
-
+"""
