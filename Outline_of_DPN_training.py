@@ -63,12 +63,20 @@ def curried_valuation(length_of_longest_trajectory):
 
 class DPN:  #ANN with Pytorch
     def __init__(self, enve):
+       
         self.n_inputs = len(enve.filled.flatten())
         #TODO: Make outputs reflexive
         self.n_outputs = 11
         self.env = enve
-        print("WORKING???")
+        self.rewards = [] 
         # Define network
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda:0")
+            print("Running on the GPU")
+        else: 
+            self.device = torch.device("cpu")
+            print("Running on the CPU")
+
         self.network = nn.Sequential(
             nn.Linear(self.n_inputs, 128).cuda(),
             nn.ReLU(),
@@ -76,10 +84,12 @@ class DPN:  #ANN with Pytorch
             nn.ReLU(),
             nn.Linear(32, self.n_outputs).cuda(), 
             nn.Softmax())
+        self.network.to(self.device)
         
     def predict(self, state):
+        
         state = state.flatten()
-        action_probs = self.network(torch.FloatTensor(state)).cuda()
+        action_probs = self.network(torch.FloatTensor(state).to(self.device))
         return action_probs
 
         '''
@@ -140,13 +150,14 @@ class DPN:  #ANN with Pytorch
         optimizer = optim.Adam(self.network.parameters(), lr=1e-3) 
         cnt = 0 
         for i in range(ITERATIONS):
-            print(i)
+           
             cnt += 1
             self.train_on_jobs(optimizer)
-            print("Iteration "+str(i+1)+" Completed with reward: " + str(self.rewards[-1])) #+ " Variance of :" + str(self.variance[-1]))
             
-            if cnt % 1 == 0: 
-                location = "./"+i+"_schds.pt"
+            print("Iteration " + str(i+1) + " Completed with reward: " + str(self.rewards[-1])) #+ " Variance of :" + str(self.variance[-1]))
+            
+            if cnt % 100 == 0: 
+                location = "./"+str(i)+"_schds.pt"
                 torch.save(self.network.state_dict(), location)
 
 
@@ -160,16 +171,24 @@ class DPN:  #ANN with Pytorch
         '''
         
         output_history = []
+        cn = 0
         while True:
+            cn += 1
             current_state = current_state_env.filled
             probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
             pa = Categorical(probs)
             picked_action = pa.sample() #returns index of the action/job selected.
             #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
             new_state = current_state_env.updateState( picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
-            reward = sum(current_state_env.rewards)
+            if len(current_state_env.rewards)==0: 
+                reward = 0 
+            else: 
+                reward = sum(current_state_env.rewards)/len(current_state_env.rewards)
             
             output_history.append( (current_state, picked_action, reward) )
+            
+            if cn > 50: 
+                break 
             if new_state is None: #essentially, you died or finished your trajectory
                 break
             else:
@@ -189,18 +208,19 @@ class DPN:  #ANN with Pytorch
         '''
         
         optimizer.zero_grad() #This sets the optimizer to update the weights by 0. We'll add to it over time! TODO: Check that it actually works
-        for job_start in range(10):
+        for job_start in range(50):
             #episode_array is going to be an array of length N containing trajectories [(s_0, a_0, r_0), ..., (s_L, a_L, r_0)]
-            print(job_start)
+            
             self.envi = CE(70)
             episode_array = [self.trajectory(self.envi) for x in range(EPISODES)]
             # Now we need to make the valuations
-            longest_trajectory = max(len(episode) for episode in episode_array)
+            longest_trajectory = 50
             valuation_fun = curried_valuation(longest_trajectory)
             cum_values = np.array([valuation_fun(ep) for ep in episode_array]) #should be a EPISODESxlength sized
             #can compute baselines without a loop?
             baseline_array = np.array([sum(cum_values[:,i])/EPISODES for i in range(longest_trajectory)]) #Probably defeats the purpose of numpy, but we're essentially trying to sum each valuation array together, and then divide by the number of episodes TODO make it work nicely
-            print(baseline_array)
+            self.rewards.append(baseline_array[0])
+            
             for i in range(EPISODES): #swapped two for loops
                 for t in range(50):
                     try:
