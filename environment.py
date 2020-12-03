@@ -131,6 +131,7 @@ class ClusterEnv:
             new_grid = last_grid
             
             
+
             new_grid = self.updateTime(new_grid2=new_grid)
             
             # calculate rewards
@@ -140,6 +141,7 @@ class ClusterEnv:
             self.choice_list = []
             self.real_choice_keys = []
         
+
     
         return(new_grid, self.count)
 
@@ -156,6 +158,7 @@ class ClusterEnv:
         mid_grid = self.shiftCurrent(time_grid)
 
         moved_grid = mid_grid
+
         cl = self.choice_list 
         ke = self.real_choice_keys
         if len(self.choice_list) > 0: 
@@ -168,10 +171,13 @@ class ClusterEnv:
         if len(self.objs_state.backlog_subset.keys()) <= 41 :
             moved_grid[41 - len(self.choice_list) - 1: 41, -1] = [0 for vali in range(42-len(self.choice_list), 41)]
 
+
         return(moved_grid)
 
     def moveFromBack(self, tg, jc, cn, pas):
         moved_stuff = tg
+
+
         
         if jc !=0: 
             if jc==1: 
@@ -271,6 +277,7 @@ class ClusterEnv:
         return(taken)
 
 
+
 '''
 testing
 '''
@@ -307,6 +314,7 @@ def save_plot(plot, iteration, step, time, select):
 #Running by n_iterations
 
 n_iterations = 30
+
 env = ClusterEnv(set_length=70)
 newenv = env.filled
 #t_step = ClusterEnv.count()
@@ -407,6 +415,7 @@ print(choices)
 
 # new15 = env.updateState(0, new14)
 # save_plot(new15, 2, 15)
+
 
 
 
