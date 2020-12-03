@@ -27,20 +27,43 @@ class DBconnect:
             that will be processed in this iteration of the model, as well as some parameters that will be updated later.  As we will want
             this to take every job that will be run, we will need to initialize this in the database after jobs have been created and
         """
-      print('Connecting to postgres database...')
+        print('Connecting to postgres database...')
         conn = psycopg2.connect(
             # update to ini file for enhance security
             host="localhost",
             database="postgres",
-            user="jhobbs",
+            user="postgres",
             password="postgres")
 
         cur = conn.cursor()
         cur.execute('SELECT version()')
         db_version = cur.fetchone()
         print(db_version)
-        cur.close()
+        #cur.close()
         #pass
+
+    def updateparams(values):
+        conn = psycopg2.connect(
+            # update to ini file for enhance security
+            host="localhost",
+            database="postgres",
+            user="postgres",
+            password="postgres")
+
+        cur = conn.cursor()
+        cur.execute('SELECT count(*) FROM skynet_params')
+        count = cur.fetchone()
+        print(count[0])
+        if count[0] == 0:
+            sql = 'INSERT INTO skynet_params (resources, syscap, long, short, resourcelow, resourcehigh, timelow, timehigh, jobs) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)'
+            cur.execute(sql, (values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], values[8]))
+            conn.commit()
+            print("Parameters have been instantiated.")
+        else:
+            sql = 'UPDATE skynet_params set resources = %s, syscap = %s, long = %s, short = %s, resourcelow = %s, resourcehigh = %s, timelow = %s, timehigh = %s, jobs =%s'
+            cur.execute(sql, (values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], values[8]))
+            conn.commit()
+            print("Parameters have been updated.")
 
     def updatejob():
         """
@@ -49,12 +72,15 @@ class DBconnect:
         """
         pass
 
+
     def updatemaster():
         """
         This function will update the master table at the end of the iteration with aggregate statistics, including whatever statistic the
         model is being limited on (for instance, total time to completion or average job slowdown)
         """
         pass
+
+
 
 
 if __name__ == '__main__':
