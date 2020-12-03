@@ -17,6 +17,7 @@ import random
 import torch
 from torch.distributions import Categorical
 from torch import nn, optim
+from environment import ClusterEnv as CE 
 
 
 #print("PyTorch:\t{}".format(torch.__version__))
@@ -61,18 +62,18 @@ def curried_valuation(length_of_longest_trajectory):
 
 
 class DPN:  #ANN with Pytorch
-    def __init__(self, env):
-        self.n_inputs = len(env.flatten())
+    def __init__(self, enve):
+        self.n_inputs = len(enve.filled.flatten())
         #TODO: Make outputs reflexive
         self.n_outputs = 11
-
+        self.env = enve
         # Define network
         self.network = nn.Sequential(
             nn.Linear(self.n_inputs, 128),
             nn.ReLU(),
             nn.Linear(128, 32),
             nn.ReLU(),
-            nn.Linear(32, self.n_outputs))
+            nn.Softmax(32, self.n_outputs))
 
     def predict(self, state):
         state = state.flatten()
@@ -90,26 +91,28 @@ class DPN:  #ANN with Pytorch
         Then does a training iteration on those jobs.
         '''
         #Let's consider a different optimizer, but this is just proof of concept. When you define a NN in pytorch, the class inherits a parameters method that's supplied to the optimizer. Hence next comment:
-        optimizer = optim.Adam(self.model.parameters(), lr=1e-3) #This kind of definition might actually have to be defined outside of our model class. TODO 1/2: split model definition from training functions. Half for readability, half to work???
+        optimizer = optim.Adam(self.network.parameters(), lr=1e-3) #This kind of definition might actually have to be defined outside of our model class. TODO 1/2: split model definition from training functions. Half for readability, half to work???
         for i in range(ITERATIONS):
-            resource_constraints, time = self.env.generate_random_jobs()
-            jobs = self.env.make_starting_states(resource_constraints, time) #this would be a list of starting states
-            self.train_on_jobs(jobs, optimizer)
+            
+            self.train_on_jobs(optimizer)
 
 
-    def trajectory(self, current_state):
+    def trajectory(self, current_state_env):
         '''
         Maybe this implementation doesn't utilize GPUs very well, but I have no clue or not.
 
         Final output looks like:
         [(s_0, a_0, r_0), ..., (s_L, a_L, r_l)]
         '''
+        
         output_history = []
         while True:
-            probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
+            probs = self.predict(current_state_env.filled)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
             picked_action = Categorical(probs).sample() #returns index of the action/job selected.
             #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
-            new_state, reward = self.env.state_and_reward(current_state, picked_action) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
+            new_state = current_state_env.updateState( picked_action, current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
+            reward = sum(current_state_env.rewards)
+            
             output_history.append( (current_state, picked_action, reward) )
             if new_state is None: #essentially, you died or finished your trajectory
                 break
@@ -117,7 +120,7 @@ class DPN:  #ANN with Pytorch
                 current_state = new_state
         return output_history
 
-    def train_on_jobs(self,jobset, optimizer):
+    def train_on_jobs(self, optimizer):
         '''
         Training from a batch. Kinda presume the batch is a set of starting states not sure how you have the implemented states (do they include actions internally?)
 
@@ -129,9 +132,10 @@ class DPN:  #ANN with Pytorch
         ]
         '''
         optimizer.zero_grad() #This sets the optimizer to update the weights by 0. We'll add to it over time! TODO: Check that it actually works
-        for job_start in jobset:
+        for job_start in range(101):
             #episode_array is going to be an array of length N containing trajectories [(s_0, a_0, r_0), ..., (s_L, a_L, r_0)]
-            episode_array = [self.trajectory(job_start) for x in range(EPISODES)]
+            self.envi = CE(70)
+            episode_array = [self.trajectory(self.envi) for x in range(EPISODES)]
             # Now we need to make the valuations
             longest_trajectory = max(len(episode) for episode in episode_array)
             valuation_fun = curried_valuation(longest_trajectory)
@@ -153,3 +157,7 @@ class DPN:  #ANN with Pytorch
                         loss += -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action) #This is what it _should_ look like in pytorch. Added negative (trying to maximize reward, but we're trying to find a minimum) on recommendation of pytorch documentation: https://pytorch.org/docs/stable/distributions.html
         loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
         optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
+
+dpn = DPN(CE(70))
+
+dpn.train(10)
