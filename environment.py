@@ -26,13 +26,17 @@ class ClusterEnv:
         self.obs_state = self.objs_state.getGrid()
 
         # percent of long jobs
-        pct_lj = .2
-        self.reslist = ["cpu", "gpu"]
+
+
+        self.pct_lj = objs_state.getLong()
+
 
         # Grab some jobs
-        grabber = jG(pct_lj, self.reslist)
+        jobs = jg(self.pct_lj, ["cpu", "gpu"])
+
         # jobs_profile is the values themselves, log is the string info about the jobs
-        self.jobs_profile, self.jobs_log = grabber.getJobs(set_length)
+        self.jobs_profile, self.jobs_log = jobs.getJobs(set_length)
+
 
         # Populate the empty state with the jobs
         self.filled = self.objs_state.fill(self.jobs_profile, self.obs_state)
@@ -415,7 +419,6 @@ print(choices)
 
 # new15 = env.updateState(0, new14)
 # save_plot(new15, 2, 15)
-
 
 
 

@@ -29,6 +29,7 @@ import random as rand
 from sklearn.utils import shuffle
 
 
+
 class JobGrabber:
     """
     The parameters in the constructor for this class are:
@@ -121,7 +122,6 @@ class Job:
                 uhhh = res + " is not dominant"
                 self.job_data[index] = uhhh
 
-
         # Check the duration label for the given job
         if loonggg:
             job_duration = float(np.random.randint(low=10, high = 15, size = 1))
@@ -139,6 +139,11 @@ class Job:
 
 
 # for testing
+
+
+
 #job_0b = JobGrabber(.2, ["cpu", "gpu"])
 
 #jobss, info = job_0b.getJobs(10)
+
+#print(jobss)
