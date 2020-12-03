@@ -47,6 +47,7 @@ class ClusterEnv:
 
         for keys in self.que_keys:
             self.objs_state.jobs_subset[keys].append([keys])
+            self.objs_state.jobs_subset[keys].append([0])
 
     def updateState(self, job_choice, last_grid):
         og = last_grid 
@@ -105,9 +106,8 @@ class ClusterEnv:
                             
                 if p1 & p2:
                     self.past_jobs[schedule_job[2][0]] = schedule_job
-                    self.real_choice_keys.append(schedule_job[2][0])
+                    self.real_choice_keys.append(schedule_job[2])
                     self.choice_list.append(job_choice) 
-                    print(self.choice_list)
                     self.past_jobs[schedule_job[2][0]].append([old_start_col])
                     c = False 
                     break  
@@ -141,7 +141,6 @@ class ClusterEnv:
             self.real_choice_keys = []
         
     
-        print(self.choice_list)
         return(new_grid, self.count)
 
     def updateTime(self, new_grid2):
@@ -203,10 +202,12 @@ class ClusterEnv:
             
 
                 self.objs_state.jobs_subset[jc] = newie
+                
+                
                 self.objs_state.jobs_subset[jc].append([nk])
 
-        
-                empty_job_start_col = self.past_jobs[pas][3][0]
+                 
+                empty_job_start_col = 13 + (int(self.objs_state.job_res_max) * (jc - 1)) + (jc - 1)
                 
                 end_col_r1 = empty_job_start_col + len(self.objs_state.jobs_subset[jc][1][0])
                 end_col_r2 = empty_job_start_col + len(self.objs_state.jobs_subset[jc][1][1])
