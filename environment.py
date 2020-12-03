@@ -317,7 +317,7 @@ def save_plot(plot, iteration, step, time, select):
 
 
 #Running by n_iterations
-
+"""
 n_iterations = 30
 
 env = ClusterEnv(set_length=70)
@@ -367,7 +367,7 @@ for f in [*range(0,lf,1)]:
 imageio.mimsave(path+'iteration2.gif', images, duration=.5)
 
 print(choices)
-
+"""
 
 #Done by hand:
 

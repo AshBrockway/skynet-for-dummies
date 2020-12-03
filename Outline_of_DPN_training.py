@@ -24,7 +24,7 @@ from parameters import TuneMe as pa
 
 ITERATIONS = 1000 #kinda like epochs?
 BATCH_SIZE = 10   #Might be the exact same thing as episodes, up for interpretation.
-EPISODES = 20     #How many trajectories to explore for a given job. Essentually to get a better estimate of the expected reward.
+EPISODES = 20   #How many trajectories to explore for a given job. Essentually to get a better estimate of the expected reward.
 DISCOUNT = 0.99   #how much to discount the reward
 ALPHA = 0.001     #learning rate?
 
@@ -67,24 +67,26 @@ class DPN:  #ANN with Pytorch
         #TODO: Make outputs reflexive
         self.n_outputs = 11
         self.env = enve
-
+        print("WORKING???")
         # Define network
         self.network = nn.Sequential(
-            nn.Linear(self.n_inputs, 128),
+            nn.Linear(self.n_inputs, 128).cuda(),
             nn.ReLU(),
             nn.Linear(128, 32),
-            nn.Softmax(self.n_outputs))
-
+            nn.ReLU(),
+            nn.Linear(32, self.n_outputs).cuda(), 
+            nn.Softmax())
+        
     def predict(self, state):
         state = state.flatten()
-        action_probs = self.network(torch.FloatTensor(state))
+        action_probs = self.network(torch.FloatTensor(state)).cuda()
         return action_probs
 
-
+        '''
         all caps words are hyperparameters you would set.
         '''
 
-
+        """
         params = pa()
         # get number of jobs
         self.jobs = params.getNumJobs()
@@ -132,21 +134,21 @@ class DPN:  #ANN with Pytorch
 
 
         self.prob_history = {} #Might be a dumb idea, but it stores the probability that the network chose the action given the state?
-
+        """
                                # key looks like (state, action) value is the probability? marked with optional1
     def train(self, ITERATIONS):
-        '''
-        Might need to be moved outside model definition due to how pytorch works????
-
-        Defines optimizer which takes steps to update our model weights. Can start with them all at 0.
-        Loops through each iteration, makes a new set of jobs after constructing the resource constraints and time from the environment.
-        Then does a training iteration on those jobs.
-        '''
-        #Let's consider a different optimizer, but this is just proof of concept. When you define a NN in pytorch, the class inherits a parameters method that's supplied to the optimizer. Hence next comment:
-        optimizer = optim.Adam(self.network.parameters(), lr=1e-3) #This kind of definition might actually have to be defined outside of our model class. TODO 1/2: split model definition from training functions. Half for readability, half to work???
+        optimizer = optim.Adam(self.network.parameters(), lr=1e-3) 
+        cnt = 0 
         for i in range(ITERATIONS):
-            
+            print(i)
+            cnt += 1
             self.train_on_jobs(optimizer)
+            print("Iteration "+str(i+1)+" Completed with reward: " + str(self.rewards[-1])) #+ " Variance of :" + str(self.variance[-1]))
+            
+            if cnt % 1 == 0: 
+                location = "./"+i+"_schds.pt"
+                torch.save(self.network.state_dict(), location)
+
 
 
     def trajectory(self, current_state_env):
@@ -159,10 +161,12 @@ class DPN:  #ANN with Pytorch
         
         output_history = []
         while True:
-            probs = self.predict(current_state_env.filled)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
-            picked_action = Categorical(probs).sample() #returns index of the action/job selected.
+            current_state = current_state_env.filled
+            probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
+            pa = Categorical(probs)
+            picked_action = pa.sample() #returns index of the action/job selected.
             #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
-            new_state = current_state_env.updateState( picked_action, current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
+            new_state = current_state_env.updateState( picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
             reward = sum(current_state_env.rewards)
             
             output_history.append( (current_state, picked_action, reward) )
@@ -183,9 +187,11 @@ class DPN:  #ANN with Pytorch
         [1, 2, 3]
         ]
         '''
+        
         optimizer.zero_grad() #This sets the optimizer to update the weights by 0. We'll add to it over time! TODO: Check that it actually works
-        for job_start in range(101):
+        for job_start in range(10):
             #episode_array is going to be an array of length N containing trajectories [(s_0, a_0, r_0), ..., (s_L, a_L, r_0)]
+            print(job_start)
             self.envi = CE(70)
             episode_array = [self.trajectory(self.envi) for x in range(EPISODES)]
             # Now we need to make the valuations
@@ -194,8 +200,9 @@ class DPN:  #ANN with Pytorch
             cum_values = np.array([valuation_fun(ep) for ep in episode_array]) #should be a EPISODESxlength sized
             #can compute baselines without a loop?
             baseline_array = np.array([sum(cum_values[:,i])/EPISODES for i in range(longest_trajectory)]) #Probably defeats the purpose of numpy, but we're essentially trying to sum each valuation array together, and then divide by the number of episodes TODO make it work nicely
+            print(baseline_array)
             for i in range(EPISODES): #swapped two for loops
-                for t in range(longest_trajectory):
+                for t in range(50):
                     try:
                         state, action, reward = episode_array[i][t]
                     except IndexError: #this occurs when the trajectory died
@@ -210,7 +217,8 @@ class DPN:  #ANN with Pytorch
         loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
         optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
 
-
+"""
 dpn = DPN(CE(70))
 
-dpn.train(10)
+dpn.train(1)
+"""
