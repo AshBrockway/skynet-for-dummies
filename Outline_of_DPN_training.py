@@ -72,8 +72,7 @@ class DPN:  #ANN with Pytorch
             nn.Linear(self.n_inputs, 128),
             nn.ReLU(),
             nn.Linear(128, 32),
-            nn.ReLU(),
-            nn.Softmax(32, self.n_outputs))
+            nn.Softmax(self.n_outputs))
 
     def predict(self, state):
         state = state.flatten()
