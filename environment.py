@@ -28,11 +28,12 @@ class ClusterEnv:
         # percent of long jobs
 
 
-        self.pct_lj = objs_state.getLong()
+        self.pct_lj = .2
+        #self.objs_state.getLong()
 
 
         # Grab some jobs
-        jobs = jg(self.pct_lj, ["cpu", "gpu"])
+        jobs = jG(self.pct_lj, ["cpu", "gpu"])
 
         # jobs_profile is the values themselves, log is the string info about the jobs
         self.jobs_profile, self.jobs_log = jobs.getJobs(set_length)
