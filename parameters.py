@@ -85,6 +85,8 @@ class TuneMe:
         self.timelow = 1
         # time usage high value
         self.timehigh = 15
+        # number of epochs
+        self.epochs = 50
         # -----------------------------------------------------------#
 
         # seed to be used to set seed for run overall
@@ -133,21 +135,21 @@ class TuneMe:
 
     # this method is to fill the empty grid created with the getGrid method of this file with jobs we generate using the JobGrabber in the jobs file
     # # The filled grid takes a jobset and a empty grid as
-    
+
     def fill(self, jobs, empty_grid):
         # subset the job list to only include the jobs for subset M (length defined above)
         for kye, val in jobs.items():
             p_list = self.getProgList(val)
             jobs[kye].append(p_list)
-        
+
         self.jobs_subset = {key1: value1 for key1, value1 in jobs.items() if int(key1) < int(self.queue_len) + 1}
         self.backlog_subset = {keyb: valueb for keyb, valueb in jobs.items() if int(keyb) > int(self.queue_len)}
-        
+
         height = (int(self.time_dim) * int(self.res_num)) + (int(self.res_num) - 1)
         grid = empty_grid.astype(float)
-        
-        # Creation of dictionary to hold job information 
-        
+
+        # Creation of dictionary to hold job information
+
         """
             The Grid must be filled. Components of this filling are:
                 1. Backlog count
@@ -158,12 +160,12 @@ class TuneMe:
                         i. Fill out the % usage in the # of rows associated with their time
         """
         # Now start with the easy part, place the # of jobs in the backlog in the last column of the grid
-        if len(self.backlog_subset.keys()) < height: 
+        if len(self.backlog_subset.keys()) < height:
             grid[0:len(self.backlog_subset.keys()), -1] = [1 for x in range(self.backlog_subset.keys())]
         else:
             grid[0:(height), -1] = [1 for x in range(height)]
 
-        
+
         job_count = -1
 
         for job, infor in self.jobs_subset.items():
@@ -185,27 +187,27 @@ class TuneMe:
 
                 for row in range(start_row, end_row):
                     grid[row, start_col:end_col] = infor[1][resource]
-               
-               
+
+
         return(grid)
 
     def getProgList(self, jobi):
-        
+
         job_prog_list = [[0] for x in range(self.res_num)]
-        
-        for res in range(self.res_num): 
+
+        for res in range(self.res_num):
             res_use = float(self.res_max_len) * jobi[0][int(res)]
-            partial_use = res_use % 1 
+            partial_use = res_use % 1
             count_full_elements = float(res_use - partial_use)
-            
+
             full_val = np.repeat(1, count_full_elements)
-            if partial_use != 0: 
+            if partial_use != 0:
                 prog_list = np.append(full_val, [float(partial_use)])
-            else: 
+            else:
                 prog_list = full_val
-            
+
             job_prog = list(prog_list)
-        
+
             job_prog_list[res] = job_prog
         return(job_prog_list)
 # Testing
