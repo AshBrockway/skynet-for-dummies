@@ -8,11 +8,11 @@ time.
 
 
 from parameters import TuneMe as pa
-# from job import JobGrabber as jg
+from job import JobGrabber
 # from DBconnect import DBconnect as db
 # from environment import ClusterEnv as Env
 # from Outline_of_DPN_training import DPN
-# from compare import SJF, Packer, FIFO, Tetris
+from compare import compare_models as comp
 
 
 
@@ -64,20 +64,22 @@ job_data, job_info = job_obj.getJobs(n_jobs)
 #comparison models object creation
 comp_models = comp(job_data, res_num, res_cap)
 
-df = comp_models.full_jobs_df
+#df needed only to double check things
+#df = comp_models.full_jobs_df
 print(comp_models.FIFO_loss)
 print(comp_models.SJF_loss)
 print(comp_models.Random_loss)
 print(comp_models.Packer_loss)
+print(comp_models.Tetris_loss)
 
 
 #Running the DPN
-emptyGrid = pars.getGrid()
-ggrid = pars.fill(job_data, emptyGrid)
+# emptyGrid = pars.getGrid()
+# ggrid = pars.fill(job_data, emptyGrid)
 
 
-ggrid2 = ggrid.flatten()
-len(ggrid2)
+# ggrid2 = ggrid.flatten()
+# len(ggrid2)
 
 
 

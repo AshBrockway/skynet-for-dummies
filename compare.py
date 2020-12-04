@@ -24,7 +24,7 @@ class compare_models:
     def __init__(self, job_dict, res_num, res_cap):
         #pulling in necessary parameters
         n_jobs = len(job_dict)
-        model_functions = ['FIFO','SJF','Random','Packer']#,'Tetris']
+        model_functions = ['FIFO','SJF','Random','Packer','Tetris']
 
         #transforming job dictionary into dataframe
         jobs_df = unpack_dict(job_dict, n_res=res_num)
@@ -38,7 +38,7 @@ class compare_models:
         self.SJF_loss = jobs_df['SJF_slowdown'].mean()
         self.Random_loss = jobs_df['Random_slowdown'].mean()
         self.Packer_loss = jobs_df['Packer_slowdown'].mean()
-        # self.Tetris_loss =
+        self.Tetris_loss = jobs_df['Tetris_slowdown'].mean()
 
 
 """
@@ -67,7 +67,7 @@ def process_df(jobs_df, job_dict, model_functions, res_num, n_jobs, res_cap):
             if m_function == 'Packer':
                 selected_job = Packer(poss_jobs, poss_jobs_df, res_available, res_num)
             if m_function == 'Tetris':
-                selected_job = Tetris(poss_jobs, poss_jobs_df, res_available)
+                selected_job = Tetris(poss_jobs, poss_jobs_df, res_available, res_num)
             #checking if job is valid, getting next valid timeslot for job
             if selected_job == 'Null':
                 time_pointer = time_pointer + 1
@@ -121,40 +121,62 @@ def find_valid_loc(job_res_list, t_array, t_cur, n_res, cap):
         t_pointer = find_valid_loc(job_res_list, t_array, t_pointer+1, n_res, cap)
     return(t_pointer)
 
+#tetris function based on n_steps needed and packer score columns
+def get_tetris(row, tuner):
+    tmp_packer_score = row['packer_score']
+    tmp_step_score = 1/row['n_steps']
+    return(tuner * tmp_packer_score + (1 - tuner) * tmp_step_score)
+
 """
 Comparison model functions
 """
 
+#First in, First out
 def FIFO(poss_jobs_dict, jobs_df):
     return(next(iter(poss_jobs_dict)))
 
-
+#Selects shortest Job
 def SJF(poss_jobs_dict, jobs_df):
     job_i = jobs_df.loc[jobs_df['n_steps'].idxmin()]['i']
     return(job_i)
 
+#Selects Random Job
 def Random(poss_jobs_dict, jobs_df):
     poss_keys = [*poss_jobs_dict]
     return(rand.choice(poss_keys))
 
+#Selects job that will best fit remaining available space
 def Packer(poss_jobs_dict, jobs_df, res_available, n_res):
     packer_jobs_df = jobs_df
     res_list = []
+    #first filters out jobs that won't work
     for i in [*range(0,n_res,1)]:
         packer_jobs_df = packer_jobs_df[packer_jobs_df['res'+str(i)] <= 1-res_available[i]]
         res_list.append('res'+str(i))
+    #returns null if no jobs can fit
     if packer_jobs_df.size == 0:
         return("Null")
+    #otherwise, returns job with the maximum resources needed combined
     else:
         packer_jobs_df['packer_score'] = packer_jobs_df.loc[:,res_list].sum(axis=1)
         job_i = packer_jobs_df.loc[packer_jobs_df['packer_score'].idxmax()]['i']
         return(job_i)
 
-def Tetris(poss_jobs_dict, jobs_df):
-
-    """
-    Tetris function (tbd)
-    """
-    pass
-
+#Combination of SJF and Packer. Tuner controls whether SJF or Packer favored - 0 to SJF, 1 to Packer
+def Tetris(poss_jobs_dict, jobs_df, res_available, n_res, tuner = .5):
+    packer_jobs_df = jobs_df
+    res_list = []
+    #first filters out jobs that won't work
+    for i in [*range(0,n_res,1)]:
+        packer_jobs_df = packer_jobs_df[packer_jobs_df['res'+str(i)] <= 1-res_available[i]]
+        res_list.append('res'+str(i))
+    #returns null if no jobs can fit
+    if packer_jobs_df.size == 0:
+        return("Null")
+    #otherwise, creates packer score as designed above, augmented by the shortest possible job
+    else:
+        packer_jobs_df['packer_score'] = packer_jobs_df.loc[:,res_list].sum(axis=1)
+        packer_jobs_df['tetris_score'] = packer_jobs_df.apply(lambda row : get_tetris(row,tuner), axis=1)
+        job_i = packer_jobs_df.loc[packer_jobs_df['tetris_score'].idxmax()]['i']
+        return(job_i)
 
