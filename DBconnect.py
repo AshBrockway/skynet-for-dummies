@@ -51,7 +51,10 @@ def get_last_iter():
     cur.execute('SELECT max(iteration) FROM skynet_params')
     last_iter = cur.fetchone()
     cur.close()
-    return (last_iter[0])
+    if last_iter[0]:
+        return(last_iter[0])
+    else:
+        return 0
 
 
 class DBconnect:
@@ -74,12 +77,11 @@ class DBconnect:
         self.iter = cur_iter
 
         #creating iteration table if not already in there
-        self.table = "iter"+str(cur_iter)
+        self.table = "iter_"+str(cur_iter)
         print(self.table)
         sql = 'CREATE TABLE IF NOT EXISTS {} ("epoch" int, "dpn_loss" numeric, "dpcnn_loss" numeric, "ac_loss" numeric, "fifo_loss" numeric, "sjf_loss" numeric, "random_loss" numeric, "packer_loss" numeric, "tetris_loss" numeric);'.format(self.table)
         self.cur.execute(sql)
         self.conn.commit()
-
 
         #checking db version
         self.cur.execute('SELECT version()')
@@ -116,10 +118,12 @@ class DBconnect:
         sql = 'INSERT INTO {} (epoch, dpn_loss, dpcnn_loss, ac_loss, fifo_loss, sjf_loss, random_loss, packer_loss, tetris_loss) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);'.format(self.table)
         self.cur.execute(sql, (cur_epoch, losses[0], losses[1], losses[2], losses[3], losses[4], losses[5], losses[6], losses[7]))
         self.conn.commit()
-        print("Intermediate Losses have been updated.")
+        print("Intermediate Losses have been updated for epoch ", cur_epoch)
 
     def close_conn(self):
         self.cur.close()
+
+print(get_last_iter())
 
 '''
 #testing

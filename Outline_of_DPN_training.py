@@ -1,13 +1,9 @@
 """
 WARNING:
-
 Code will not be executable from this alone. Must clean up the TODOs.
-
 Provides a backbone for the training method on a deep policy network.
-
 Presumably, the input to the network will be images as the current state (including current resource usage, and random M jobs to schedule).
 The output predictions are the probabilities for choosing to schedule one of the M jobs.
-
 Most important is the train_on_jobs method for updating the weights of the network, in accordance with DPN loss functions.
 """
 
@@ -34,9 +30,7 @@ gamma = .99
 def curried_valuation(length_of_longest_trajectory):
     '''
     Given the length of the longest trajectory of a set of episodes;
-
     returns the function that will compute the valuation of an episode array (while padding it)
-
     Result intended to be used as  map(valuation, episodes_array) to return valuation of each episodes.
     '''
     def valuation(episode):
@@ -51,10 +45,12 @@ def curried_valuation(length_of_longest_trajectory):
             #If the episode isn't as long as the longest trajectory, pad it
             episode.extend([(0,0,0) for y in range(length_of_longest_trajectory-length)]) #have to make sure the numbers line up correctly
         out = np.zeros(len(episode))
-        x = [i[2] for i in episode] #rewards
-        out[-1] = x[-1]
-        for i in reversed(range(len(x)-1)): #go backwards
-            out[i] = x[i] + gamma*out[i+1] #this step valuation = reward + gamma*next_step_valuation
+        rews = [i[2] for i in episode] #rewards
+        out[-1] = rews[-1]
+        for i in reversed(range(len(rews)-1)):
+            #go backwards
+            out[i] = rews[i] + gamma*out[i+1] #this step valuation = reward + gamma*next_step_valuation
+
         #assert x.ndim >= 1
         return out
     return valuation
@@ -78,11 +74,11 @@ class DPN:  #ANN with Pytorch
             print("Running on the CPU")
 
         self.network = nn.Sequential(
-            nn.Linear(self.n_inputs, 128),
+            nn.Linear(self.n_inputs, 128).cuda(),
             nn.ReLU(),
             nn.Linear(128, 32),
             nn.ReLU(),
-            nn.Linear(32, self.n_outputs),
+            nn.Linear(32, self.n_outputs).cuda(),
             nn.Softmax())
         self.network.to(self.device)
 
@@ -101,48 +97,34 @@ class DPN:  #ANN with Pytorch
         # get number of jobs
         self.jobs = params.getNumJobs()
         print("Jobs = " + str(self.jobs))
-
         input_features = np.array()
         target_output = np.array()
         target_output = target_output.reshape()
         weigths = np.array()
-
         bias = 0.3
         lr = 0.05
-
         def sigmoid(x):
             return 1/(1+np.exp(-x))
         def sigmoid_der(x):
             return sigmoid(x)*(1-sigmoid(x))
-
         for epoch in range(10000):
             inputs = input_features
             pred_in = np.dot(input, weights) + bias
             pred_out = sigmoid(pred_in)
             error = pred_out - target_output
             x = error.sum()
-
             print(x)
-
             dcost_dpred = error
             dpred_dx = sigmoid_der(pred_out)
-
             z_delta = dcost_dpred * dpred_dx
-
             inputs = inputs_features.T
             weights -= lr * np.dot(inputs, z_delta)
-
             for i in z_delta:
                     bias -= lr * i
-
         single_point = n.array()
         result1 = np.dot(single_point, weights) + bias
-
         result2 = sigmoid (result1)
-
         print(result2)
-
-
         self.prob_history = {} #Might be a dumb idea, but it stores the probability that the network chose the action given the state?
         """
                                # key looks like (state, action) value is the probability? marked with optional1
@@ -165,7 +147,6 @@ class DPN:  #ANN with Pytorch
     def trajectory(self, current_state_env):
         '''
         Maybe this implementation doesn't utilize GPUs very well, but I have no clue or not.
-
         Final output looks like:
         [(s_0, a_0, r_0), ..., (s_L, a_L, r_l)]
         '''
@@ -180,10 +161,9 @@ class DPN:  #ANN with Pytorch
             picked_action = pa.sample() #returns index of the action/job selected.
             #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
             new_state = current_state_env.updateState( picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
-            if len(current_state_env.rewards)==0:
-                reward = 0
-            else:
-                reward = sum([i**-1 for i in current_state_env.rewards])
+
+            reward = current_state_env.reward
+
 
             output_history.append( (current_state, picked_action, reward) )
 
@@ -198,7 +178,6 @@ class DPN:  #ANN with Pytorch
     def train_on_jobs(self, optimizer):
         '''
         Training from a batch. Kinda presume the batch is a set of starting states not sure how you have the implemented states (do they include actions internally?)
-
         example shape of episode_array
         [
         [1, 2, 3, 4, 5],
@@ -216,7 +195,7 @@ class DPN:  #ANN with Pytorch
             # Now we need to make the valuations
             longest_trajectory = 50
             valuation_fun = curried_valuation(longest_trajectory)
-            cum_values = np.array([valuation_fun(ep) for ep in episode_array]) #should be a EPISODESxlength sized
+            cum_values = np.array([valuation_fun(ep) for ep in episode_array])
             #can compute baselines without a loop?
             baseline_array = np.array([sum(cum_values[:,i])/EPISODES for i in range(longest_trajectory)]) #Probably defeats the purpose of numpy, but we're essentially trying to sum each valuation array together, and then divide by the number of episodes TODO make it work nicely
             self.rewards.append(baseline_array[0])
@@ -237,14 +216,10 @@ class DPN:  #ANN with Pytorch
         loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
         optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
 
-'''
-#testing
-
+"""
 dpn = DPN(CE(70))
-
 dpn.train(1)
-
-'''
+"""
 
 
 class DP_CNN:  #CNN with Pytorch
@@ -311,7 +286,6 @@ class DP_CNN:  #CNN with Pytorch
     def trajectory(self, current_state_env):
         '''
         Maybe this implementation doesn't utilize GPUs very well, but I have no clue or not.
-
         Final output looks like:
         [(s_0, a_0, r_0), ..., (s_L, a_L, r_l)]
         '''
@@ -326,10 +300,9 @@ class DP_CNN:  #CNN with Pytorch
             picked_action = pa.sample() #returns index of the action/job selected.
             #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
             new_state = current_state_env.updateState( picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
-            if len(current_state_env.rewards)==0:
-                reward = 0
-            else:
-                reward = sum([i**-1 for i in current_state_env.rewards])
+
+            reward = current_state_env.reward
+
 
             output_history.append( (current_state, picked_action, reward) )
 
@@ -344,7 +317,6 @@ class DP_CNN:  #CNN with Pytorch
     def train_on_jobs(self, optimizer):
         '''
         Training from a batch. Kinda presume the batch is a set of starting states not sure how you have the implemented states (do they include actions internally?)
-
         example shape of episode_array
         [
         [1, 2, 3, 4, 5],
@@ -362,7 +334,7 @@ class DP_CNN:  #CNN with Pytorch
             # Now we need to make the valuations
             longest_trajectory = 50
             valuation_fun = curried_valuation(longest_trajectory)
-            cum_values = np.array([valuation_fun(ep) for ep in episode_array]) #should be a EPISODESxlength sized
+            cum_values = np.array([valuation_fun(ep) for ep in episode_array])
             #can compute baselines without a loop?
             baseline_array = np.array([sum(cum_values[:,i])/EPISODES for i in range(longest_trajectory)]) #Probably defeats the purpose of numpy, but we're essentially trying to sum each valuation array together, and then divide by the number of episodes TODO make it work nicely
             self.rewards.append(baseline_array[0])
@@ -384,9 +356,9 @@ class DP_CNN:  #CNN with Pytorch
         optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
 
 
-'''
-cnn training
+
+#cnn training
 dpn2 = DP_CNN(CE(70))
 
 dpn2.train(1)
-'''
+

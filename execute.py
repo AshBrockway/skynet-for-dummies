@@ -7,9 +7,10 @@ time.
 """
 
 
-from parameters import TuneMe as pa
+from parameters import TuneMe as Pa
 from job import JobGrabber
-from DBconnect import DBconnect as db
+from DBconnect import DBconnect
+from DBconnect import get_last_iter
 from environment import ClusterEnv as Env
 from Outline_of_DPN_training import DPN, DP_CNN
 from compare import compare_models as comp
@@ -41,15 +42,49 @@ Further considerations:
         and if separately, we will need some way to save jobs to use again.
     2. Comparison models will not take the image that the DPN will use, so we will need to figure out how to directly import jobs/env to these models
 
-TODO: set up code for this file
+
+DBconnect LIST FORMATS:
+
+#VALUES must be in list form: [n_resources, syscap, %long, %short, resourcelow, resourcehigh, timelow, timehigh, n_jobs, n_epochs]
+#OVERALL LOSSES must be in list form: [DPN_loss, DPCNN_loss, AC_loss, FIFO_loss, SJF_loss, Random_loss, Packer_loss, Tetris_loss]
+INTERMEDIATE LOSSES must be in list form: [DPN_loss, DPCNN_loss, AC_loss, FIFO_loss, SJF_loss, Random_loss, Packer_loss, Tetris_loss]
+
 """
 
 
 
 def main():
-    objs_state = pa()
-    objs_state.updateDB("params")
+    #set new parameters here
+    pa = Pa()
 
+    #getting last iteration from database so we know what we're on
+    last_iteration = get_last_iter()
+    iteration = last_iteration + 1
+
+    #updating database with parameters
+    #FORM: [n_resources, syscap, %long, %short, resourcelow, resourcehigh, timelow, timehigh, n_jobs, n_epochs]
+    param_list = [pa.res_num, pa.res_cap, pa.long, 1-pa.long, pa.reslow, pa.reshigh, pa.timelow, pa.timehigh, pa.jobs, pa.epochs]
+    db = DBconnect(iteration)
+    db.update_params(param_list)
+
+    #create res list
+    if pa.res_num == 2:
+        resource_names = ['cpu','gpu']
+    else:
+        resource_names = []
+        for i in [*range(1,pa.res_num+1, 1)]:
+            resource_names.append('res_'+str(i))
+    job_obj = JobGrabber(pa.long, resource_names)
+
+    jobset_list = {}
+    for i in [*range(1, pa.epochs+1,1)]:
+        pass
+
+
+
+
+
+'''
 #getting/setting parameters, etc.
 pars = pa()
 res_num = pars.res_num
@@ -57,7 +92,6 @@ res_cap = pars.res_cap
 
 
 #getting jobs
-n_jobs = 100
 job_obj = JobGrabber(.2, ["cpu", "gpu"])
 job_data, job_info = job_obj.getJobs(n_jobs)
 
@@ -80,6 +114,5 @@ print(comp_models.Tetris_loss)
 
 # ggrid2 = ggrid.flatten()
 # len(ggrid2)
-
-
+'''
 
