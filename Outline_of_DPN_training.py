@@ -74,11 +74,11 @@ class DPN:  #ANN with Pytorch
             print("Running on the CPU")
 
         self.network = nn.Sequential(
-            nn.Linear(self.n_inputs, 128).cuda(),
+            nn.Linear(self.n_inputs, 128),
             nn.ReLU(),
             nn.Linear(128, 32),
             nn.ReLU(),
-            nn.Linear(32, self.n_outputs).cuda(),
+            nn.Linear(32, self.n_outputs),
             nn.Softmax())
         self.network.to(self.device)
 
@@ -161,10 +161,10 @@ class DPN:  #ANN with Pytorch
             picked_action = pa.sample() #returns index of the action/job selected.
             #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
             new_state = current_state_env.updateState( picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
-  
+
             reward = current_state_env.reward
-            
-            
+
+
             output_history.append( (current_state, picked_action, reward) )
 
             if cn > 50:
@@ -198,7 +198,7 @@ class DPN:  #ANN with Pytorch
             cum_values = np.array([valuation_fun(ep) for ep in episode_array])
             #can compute baselines without a loop?
             baseline_array = np.array([sum(cum_values[:,i])/EPISODES for i in range(longest_trajectory)]) #Probably defeats the purpose of numpy, but we're essentially trying to sum each valuation array together, and then divide by the number of episodes TODO make it work nicely
-            self.rewards.append(baseline_array[0])
+            self.rewards.append(baseline_array[-1])
 
             for i in range(EPISODES): #swapped two for loops
                 for t in range(50):
@@ -216,10 +216,10 @@ class DPN:  #ANN with Pytorch
         loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
         optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
 
-"""
+'''
 dpn = DPN(CE(70))
-dpn.train(1)
-"""
+dpn.train(3)
+'''
 
 
 class DP_CNN:  #CNN with Pytorch
@@ -337,7 +337,7 @@ class DP_CNN:  #CNN with Pytorch
             cum_values = np.array([valuation_fun(ep) for ep in episode_array])
             #can compute baselines without a loop?
             baseline_array = np.array([sum(cum_values[:,i])/EPISODES for i in range(longest_trajectory)]) #Probably defeats the purpose of numpy, but we're essentially trying to sum each valuation array together, and then divide by the number of episodes TODO make it work nicely
-            self.rewards.append(baseline_array[0])
+            self.rewards.append(baseline_array[-1])
 
             for i in range(EPISODES): #swapped two for loops
                 for t in range(50):
@@ -356,10 +356,9 @@ class DP_CNN:  #CNN with Pytorch
         optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
 
 
-
+'''
 #cnn training
-"""
 dpn2 = DP_CNN(CE(70))
 
-dpn2.train(1)
-"""
+dpn2.train(3)
+'''

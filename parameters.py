@@ -70,7 +70,11 @@ class TuneMe:
         # number of resources in problem
         self.res_num = 2
         #number of jobs
-        self.jobs = 16
+        self.jobs = 70
+        #number of job sets
+        self.jobsets = 50
+        #number of epochs
+        self.epochs = 20
 
         ##The below parameters are not tuneable at this moment, but if updated will change the display on the dashboard.
         # proportion of short jobs
@@ -85,8 +89,6 @@ class TuneMe:
         self.timelow = 1
         # time usage high value
         self.timehigh = 15
-        # number of epochs
-        self.epochs = 50
         # -----------------------------------------------------------#
 
         # seed to be used to set seed for run overall

@@ -9,8 +9,8 @@ time.
 
 from parameters import TuneMe as Pa
 from job import JobGrabber
-from DBconnect import DBconnect
-from DBconnect import get_last_iter
+#from DBconnect import DBconnect
+#from DBconnect import get_last_iter
 from environment import ClusterEnv as Env
 from Outline_of_DPN_training import DPN, DP_CNN
 from compare import compare_models as comp
@@ -53,58 +53,119 @@ INTERMEDIATE LOSSES must be in list form: [DPN_loss, DPCNN_loss, AC_loss, FIFO_l
 
 
 
-def main():
-    #set new parameters here
-    pa = Pa()
+# def main():
+#     #set new parameters here
+#     pa = Pa()
 
-    #getting last iteration from database so we know what we're on
-    last_iteration = get_last_iter()
-    iteration = last_iteration + 1
+#     #getting last iteration from database so we know what we're on
+#     last_iteration = get_last_iter()
+#     iteration = last_iteration + 1
 
-    #updating database with parameters
-    #FORM: [n_resources, syscap, %long, %short, resourcelow, resourcehigh, timelow, timehigh, n_jobs, n_epochs]
-    param_list = [pa.res_num, pa.res_cap, pa.long, 1-pa.long, pa.reslow, pa.reshigh, pa.timelow, pa.timehigh, pa.jobs, pa.epochs]
-    db = DBconnect(iteration)
-    db.update_params(param_list)
+#     #updating database with parameters
+#     #FORM: [n_resources, syscap, %long, %short, resourcelow, resourcehigh, timelow, timehigh, n_jobs, n_epochs]
+#     param_list = [pa.res_num, pa.res_cap, pa.long, 1-pa.long, pa.reslow, pa.reshigh, pa.timelow, pa.timehigh, pa.jobs, pa.epochs]
+#     db = DBconnect(iteration)
+#     db.update_params(param_list)
 
-    #create res list
-    if pa.res_num == 2:
-        resource_names = ['cpu','gpu']
-    else:
-        resource_names = []
-        for i in [*range(1,pa.res_num+1, 1)]:
-            resource_names.append('res_'+str(i))
-    job_obj = JobGrabber(pa.long, resource_names)
+#     #create res list
+#     if pa.res_num == 2:
+#         resource_names = ['cpu','gpu']
+#     else:
+#         resource_names = []
+#         for i in [*range(1,pa.res_num+1, 1)]:
+#             resource_names.append('res_'+str(i))
+#     job_obj = JobGrabber(pa.long, resource_names)
 
-    jobset_list = {}
-    for i in [*range(1, pa.epochs+1,1)]:
-        pass
+#     #creating big list of cluster enviornments (jobsets) to iterate over)
+#     CE_list = []
+#     for i in [*range(1, pa.jobsets+1,1)]:
+#         c_obj = Env(pa.jobs)
+#         CE_list.append(c_obj)
+
+#     #begin training iterations
+#     for i in [*range(1, pa.epochs+1,1)]:
+#         job_data, job_info = job_obj.getJobs(pa.jobs)
 
 
 
 
 
-'''
+
+
 #getting/setting parameters, etc.
-pars = pa()
+pars = Pa()
 res_num = pars.res_num
 res_cap = pars.res_cap
-
+n_jobs = pars.jobs
 
 #getting jobs
 job_obj = JobGrabber(.2, ["cpu", "gpu"])
-job_data, job_info = job_obj.getJobs(n_jobs)
 
-#comparison models object creation
-comp_models = comp(job_data, res_num, res_cap)
+#initializing comp models completion time lists
+FIFO_CT = []
+SJF_CT = []
+Random_CT = []
+Packer_CT = []
+Tetris_CT = []
+
+FIFO_slow = []
+SJF_slow = []
+Random_slow = []
+Packer_slow = []
+Tetris_slow = []
+
+comp_iterations = 100
+while comp_iterations >0:
+    job_data, job_info = job_obj.getJobs(n_jobs)
+
+    #comparison models object creation
+    comp_models = comp(job_data, res_num, res_cap)
+
+    FIFO_CT.append(comp_models.FIFO_actime)
+    SJF_CT.append(comp_models.SJF_actime)
+    Random_CT.append(comp_models.Random_actime)
+    Packer_CT.append(comp_models.Packer_actime)
+    Tetris_CT.append(comp_models.Tetris_actime)
+
+    FIFO_slow.append(comp_models.FIFO_loss)
+    SJF_slow.append(comp_models.SJF_loss)
+    Random_slow.append(comp_models.Random_loss)
+    Packer_slow.append(comp_models.Packer_loss)
+    Tetris_slow.append(comp_models.Tetris_loss)
+
+    comp_iterations -= 1
+
+
+FIFO_CT_fin = sum(FIFO_CT)/len(FIFO_CT)
+SJF_CT_fin = sum(SJF_CT)/len(SJF_CT)
+Random_CT_fin = sum(Random_CT)/len(Random_CT)
+Packer_CT_fin = sum(Packer_CT)/len(Packer_CT)
+Tetris_CT_fin = sum(Tetris_CT)/len(Tetris_CT)
+
+print(FIFO_CT_fin)
+print(SJF_CT_fin)
+print(Random_CT_fin)
+print(Packer_CT_fin)
+print(Tetris_CT_fin)
+
+
+FIFO_slow_fin = sum(FIFO_slow)/len(FIFO_slow)
+SJF_slow_fin = sum(SJF_slow)/len(SJF_slow)
+Random_slow_fin = sum(Random_slow)/len(Random_slow)
+Packer_slow_fin = sum(Packer_slow)/len(Packer_slow)
+Tetris_slow_fin = sum(Tetris_slow)/len(Tetris_slow)
+print("\n")
+print(FIFO_slow_fin/n_jobs)
+print(SJF_slow_fin/n_jobs)
+print(Random_slow_fin/n_jobs)
+print(Packer_slow_fin/n_jobs)
+print(Tetris_slow_fin/n_jobs)
+
+
 
 #df needed only to double check things
 #df = comp_models.full_jobs_df
-print(comp_models.FIFO_loss)
-print(comp_models.SJF_loss)
-print(comp_models.Random_loss)
-print(comp_models.Packer_loss)
-print(comp_models.Tetris_loss)
+
 
 
 #Running the DPN
@@ -114,5 +175,5 @@ print(comp_models.Tetris_loss)
 
 # ggrid2 = ggrid.flatten()
 # len(ggrid2)
-'''
+
 

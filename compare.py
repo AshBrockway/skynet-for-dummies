@@ -20,6 +20,7 @@ import pandas as pd
 import numpy as np
 import random as rand
 
+
 class compare_models:
     def __init__(self, job_dict, res_num, res_cap):
         #pulling in necessary parameters
@@ -30,7 +31,7 @@ class compare_models:
         jobs_df = unpack_dict(job_dict, n_res=res_num)
 
         #transforms df to include slowdown information for every job on the dataframe
-        jobs_df = process_df(jobs_df, job_dict, model_functions, res_num, n_jobs, res_cap)
+        jobs_df, completion_dict = process_df(jobs_df, job_dict, model_functions, res_num, n_jobs, res_cap)
         self.full_jobs_df = jobs_df
 
         #slowdown variables for later storage
@@ -40,22 +41,33 @@ class compare_models:
         self.Packer_loss = jobs_df['Packer_slowdown'].mean()
         self.Tetris_loss = jobs_df['Tetris_slowdown'].mean()
 
+        #alternative reward
+        self.FIFO_actime = completion_dict.get('FIFO')
+        self.SJF_actime = completion_dict.get('SJF')
+        self.Random_actime = completion_dict.get('Random')
+        self.Packer_actime = completion_dict.get('Packer')
+        self.Tetris_actime = completion_dict.get('Tetris')
+
 
 """
 Primary function
 """
 #processes jobs_df to include comparison models
 def process_df(jobs_df, job_dict, model_functions, res_num, n_jobs, res_cap):
+    completion_dict = {}
     for m_function in model_functions:
         #initializing time array to track jobs/slowdown, other inits
         states = time_array(n_jobs*2, res_num)
         time_pointer = 1
         job_slowdown = {}
+        jobs_left = []
+
         #copying job dict for use in loop
         poss_jobs = job_dict.copy()
         poss_jobs_df = jobs_df
         #looping through to assign jobs based on the model
         while len(poss_jobs) > 0:
+            last_time_pointer = time_pointer
             res_available = states[time_pointer,]
             #getting selected job key from given function
             if m_function == 'FIFO':
@@ -68,17 +80,24 @@ def process_df(jobs_df, job_dict, model_functions, res_num, n_jobs, res_cap):
                 selected_job = Packer(poss_jobs, poss_jobs_df, res_available, res_num)
             if m_function == 'Tetris':
                 selected_job = Tetris(poss_jobs, poss_jobs_df, res_available, res_num)
-            #checking if job is valid, getting next valid timeslot for job
+            #checking if job is valid, getting next valid timeslot for job - this is how the packer and tetris move to next T
             if selected_job == 'Null':
                 time_pointer = time_pointer + 1
+                jobs_left.append(-len(poss_jobs))
                 continue
             res_list = poss_jobs.get(selected_job)[0]
             time_pointer = find_valid_loc(res_list, states, time_pointer, res_num, res_cap)
+            #marking down the number of jobs left for job_completion valuation
+            if time_pointer != last_time_pointer: #if t has changed, only happens with FIFO, SJF, Random b/c of 'Null' in other two
+                n_to_write = time_pointer - last_time_pointer
+                while(n_to_write >0):
+                    jobs_left.append(-len(poss_jobs))
+                    n_to_write = n_to_write -1
             #writing job info to all necessary cells
             for i in [*range(0,res_num,1)]:
                 for j in [*range(time_pointer, int(time_pointer+res_list[-1]),1)]:
                     states[j, i] = states[j, i] + res_list[i]
-            #marking down when job was scheduled to new jobs array
+            #marking down when job was scheduled to new jobs array (for slowdown)
             job_slowdown[selected_job] = time_pointer-1
             #deleting job key from possible jobs
             del poss_jobs[selected_job]
@@ -88,7 +107,11 @@ def process_df(jobs_df, job_dict, model_functions, res_num, n_jobs, res_cap):
         slowdown_df = pd.DataFrame.from_dict(job_slowdown, orient='index', columns=[m_function+'_slowdown'] )
         slowdown_df['i'] = job_slowdown.keys()
         jobs_df = jobs_df.merge(slowdown_df, how='outer', on=['i'])
-    return(jobs_df)
+
+        #writing completion time reward for each timestep
+        completion_dict[m_function] = sum(jobs_left)/len(jobs_left)
+
+    return(jobs_df, completion_dict)
 
 
 """

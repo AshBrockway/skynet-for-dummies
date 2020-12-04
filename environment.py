@@ -47,13 +47,11 @@ class ClusterEnv:
         self.choice_list = []
         self.count  = 0
         self.reward = 0
-
-        self.real_choice_keys = [] 
+        self.real_choice_keys = []
         fill = self.objs_state.backlog_subset
         self.real_backlog = fill
         self.taken = []
-        self.cnt_sch = 0 
-
+        self.cnt_sch = 0
 
         for keys in self.que_keys:
             self.objs_state.jobs_subset[keys].append([keys])
@@ -120,16 +118,14 @@ class ClusterEnv:
                     self.choice_list.append(job_choice)
                     self.past_jobs[schedule_job[2][0]].append([old_start_col])
                     self.taken.append(tl)
+                    self.reward = 0
+                    c = False
+                    break
 
-                    self.reward = 0 
-                    c = False 
-                    break  
-                
-            if c ==True: 
-                if p1 ==True: 
-                    
-                    for row in range(resource[0][0], resource[0][1]): 
+            if c ==True:
+                if p1 ==True:
 
+                    for row in range(resource[0][0], resource[0][1]):
                         new_grid[row, old_start_col:old_start_col + len(schedule_job[1][0])] = schedule_job[1][0]
                         new_grid[row, sch_col1: sch_col1 + len(schedule_job[1][0])] = [0 for x in range(len(schedule_job[1][0]))]
 
@@ -148,11 +144,9 @@ class ClusterEnv:
 
             # calculate rewards
 
-            
             subset = [v[0][-1] for i, v in self.objs_state.jobs_subset.items()]
             bkg = [v[0][-1] for i, v in self.real_backlog.items()]
             curr = [v for v in self.taken]
-            
 
             re = [item for sublist in [subset, bkg, curr] for item in sublist if item != 0]
             sre = [1/val for val in re]
@@ -185,27 +179,27 @@ class ClusterEnv:
         moved_grid = mid_grid
 
 
-         
-        if len(self.choice_list) > 0: 
+        if len(self.choice_list) > 0:
             c = 1
-            pasti = 0 
+            pasti = 0
             for i in self.choice_list:
-                if i != 0: 
+                if i != 0:
                     if i != pasti:
-                        moved_grid = self.moveFromBack(mid_grid, i, c) 
-                        
-                    pasti = i 
+                        moved_grid = self.moveFromBack(mid_grid, i, c)
+
+                    pasti = i
                     c += 1
                     """
         for i in self.choice_list:
-            try: 
-                if self.objs_state.jobs_subset[i][2][0] > 10: 
+            try:
+                if self.objs_state.jobs_subset[i][2][0] > 10:
                     del self.objs_state.backlog_subset[self.objs_state.jobs_subset[i][2][0]]
-            except: KeyError 
+            except: KeyError
            """
-                    
+
         if len(self.real_backlog.keys()) <= 41 :
             moved_grid[41 - self.cnt_sch + 1: 41, -1] = [0 for vali in range(42-self.cnt_sch, 41)]
+
 
         return(moved_grid)
 
@@ -213,10 +207,8 @@ class ClusterEnv:
         moved_stuff = tg
 
 
-        
-        if jc !=0: 
-            self.cnt_sch += 1 
-
+        if jc !=0:
+            self.cnt_sch += 1
             if jc==1:
                 newie = self.objs_state.backlog_subset[self.cnt_sch + 11]
                 nk = (len(self.past_jobs.keys()) + 10 + cn)
@@ -224,7 +216,6 @@ class ClusterEnv:
 
                 self.objs_state.jobs_subset[jc] = newie
                 self.objs_state.jobs_subset[jc].append([nk])
-                
 
 
 
@@ -239,16 +230,14 @@ class ClusterEnv:
                     moved_stuff[r, empty_job_start_col:end_col_r1] = np.array(self.objs_state.jobs_subset[jc][1][0])
                     moved_stuff[22 + r, empty_job_start_col:end_col_r2] = np.array(self.objs_state.jobs_subset[jc][1][1])
 
-    
-            else: 
-        
+            else:
+
                 newie = self.objs_state.backlog_subset[self.cnt_sch + 11]
-                
-                    
-                
+
+
+
                 nk = (len(self.past_jobs.keys()) + 10 + cn)
                 del self.objs_state.jobs_subset[jc]
-                
 
                 self.objs_state.jobs_subset[jc] = newie
 
@@ -266,9 +255,7 @@ class ClusterEnv:
                 for r in range(time):
                     moved_stuff[r, empty_job_start_col:end_col_r1] = np.array(self.objs_state.jobs_subset[jc][1][0])
                     moved_stuff[22 + r, empty_job_start_col:end_col_r2] = np.array(self.objs_state.jobs_subset[jc][1][1])
-
-            del self.real_backlog[self.cnt_sch + 11]        
-            
+            del self.real_backlog[self.cnt_sch + 11]
 
         return(moved_stuff)
 
@@ -310,10 +297,8 @@ class ClusterEnv:
             ng[row2 + 21, len(n_val2):12] = n_0s2
 
 
-        
         return(ng)
 
-    
 
 """
 '''
