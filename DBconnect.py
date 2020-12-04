@@ -121,7 +121,7 @@ class DBconnect:
     def close_conn(self):
         self.cur.close()
 
-
+'''
 #testing
 #get_last_iter()
 
@@ -134,6 +134,7 @@ db.update_master(fake_losses)
 
 db.update_iteration(fake_losses, 3)
 
-
+db.close_conn()
+'''
 
 
