@@ -161,10 +161,10 @@ class DPN:  #ANN with Pytorch
             picked_action = pa.sample() #returns index of the action/job selected.
             #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
             new_state = current_state_env.updateState( picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
-
+  
             reward = current_state_env.reward
-
-
+            
+            
             output_history.append( (current_state, picked_action, reward) )
 
             if cn > 50:
@@ -358,7 +358,8 @@ class DP_CNN:  #CNN with Pytorch
 
 
 #cnn training
+"""
 dpn2 = DP_CNN(CE(70))
 
 dpn2.train(1)
-
+"""
