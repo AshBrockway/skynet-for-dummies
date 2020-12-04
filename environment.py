@@ -46,9 +46,12 @@ class ClusterEnv:
         self.past_jobs = {}
         self.choice_list = []
         self.count  = 0
-        self.rewards = {}
+        self.reward = 0
         self.real_choice_keys = [] 
-        
+        fill = self.objs_state.backlog_subset
+        self.real_backlog = fill
+        self.taken = []
+        self.cnt_sch = 0 
 
         for keys in self.que_keys:
             self.objs_state.jobs_subset[keys].append([keys])
@@ -114,6 +117,8 @@ class ClusterEnv:
                     self.real_choice_keys.append(schedule_job[2])
                     self.choice_list.append(job_choice) 
                     self.past_jobs[schedule_job[2][0]].append([old_start_col])
+                    self.taken.append(tl)
+                    self.reward = 0 
                     c = False 
                     break  
                 
@@ -135,12 +140,17 @@ class ClusterEnv:
         if stop:
             new_grid = last_grid
             
-            
-
             new_grid = self.updateTime(new_grid2=new_grid)
             
             # calculate rewards
-            self.rewards[self.count]= self.getReward(self.choice_list)
+            
+            subset = [v[0][-1] for i, v in self.objs_state.jobs_subset.items()]
+            bkg = [v[0][-1] for i, v in self.real_backlog.items()]
+            curr = [v for v in self.taken]
+            
+            re = [item for sublist in [subset, bkg, curr] for item in sublist if item != 0]
+            sre = [1/val for val in re]
+            self.reward = len(self.past_jobs.keys()) - 70
                 #self.rewards[]
                 # erase past choices after time steps and rewards are finished
             self.choice_list = []
@@ -151,8 +161,12 @@ class ClusterEnv:
         return(new_grid, self.count)
 
     def updateTime(self, new_grid2):
+        
         self.count += 1
-        self.taken = {}
+        for i in self.taken:
+            if i > 0:
+                self.taken[self.taken.index(i)] = i - 1
+                
         time_grid = self.obs_state
 
         time_grid[0:19, 0:12] = new_grid2[1:20, 0:12]
@@ -164,35 +178,45 @@ class ClusterEnv:
 
         moved_grid = mid_grid
 
-        cl = self.choice_list 
-        ke = self.real_choice_keys
+         
         if len(self.choice_list) > 0: 
             c = 1
+            pasti = 0 
             for i in self.choice_list:
                 if i != 0: 
-                    moved_grid = self.moveFromBack(mid_grid, i, c, self.real_choice_keys[self.choice_list.index(i)]) 
+                    if i != pasti:
+                        moved_grid = self.moveFromBack(mid_grid, i, c) 
+                        
+                    pasti = i 
                     c += 1
+                    """
+        for i in self.choice_list:
+            try: 
+                if self.objs_state.jobs_subset[i][2][0] > 10: 
+                    del self.objs_state.backlog_subset[self.objs_state.jobs_subset[i][2][0]]
+            except: KeyError 
+           """
+                    
+        if len(self.real_backlog.keys()) <= 41 :
+            moved_grid[41 - self.cnt_sch + 1: 41, -1] = [0 for vali in range(42-self.cnt_sch, 41)]
 
-        if len(self.objs_state.backlog_subset.keys()) <= 41 :
-            moved_grid[41 - len(self.choice_list) - 1: 41, -1] = [0 for vali in range(42-len(self.choice_list), 41)]
-
-
+        
         return(moved_grid)
 
-    def moveFromBack(self, tg, jc, cn, pas):
+    def moveFromBack(self, tg, jc, cn):
         moved_stuff = tg
-
 
         
         if jc !=0: 
-            if jc==1: 
-                newie = self.objs_state.backlog_subset[(len(self.past_jobs.keys()) + 10) + cn]
+            self.cnt_sch += 1 
+            if jc==1:
+                newie = self.objs_state.backlog_subset[self.cnt_sch + 11]
                 nk = (len(self.past_jobs.keys()) + 10 + cn)
                 del self.objs_state.jobs_subset[jc]
-            
-
+                
                 self.objs_state.jobs_subset[jc] = newie
                 self.objs_state.jobs_subset[jc].append([nk])
+                
 
         
                 empty_job_start_col = 13
@@ -207,11 +231,14 @@ class ClusterEnv:
                     moved_stuff[22 + r, empty_job_start_col:end_col_r2] = np.array(self.objs_state.jobs_subset[jc][1][1])
     
             else: 
-                newie = self.objs_state.backlog_subset[(len(self.past_jobs.keys()) + 10) + cn]
+        
+                newie = self.objs_state.backlog_subset[self.cnt_sch + 11]
+                
+                    
+                
                 nk = (len(self.past_jobs.keys()) + 10 + cn)
                 del self.objs_state.jobs_subset[jc]
-            
-
+                
                 self.objs_state.jobs_subset[jc] = newie
                 
                 
@@ -228,7 +255,7 @@ class ClusterEnv:
                 for r in range(time):
                     moved_stuff[r, empty_job_start_col:end_col_r1] = np.array(self.objs_state.jobs_subset[jc][1][0])
                     moved_stuff[22 + r, empty_job_start_col:end_col_r2] = np.array(self.objs_state.jobs_subset[jc][1][1])
-    
+            del self.real_backlog[self.cnt_sch + 11]        
             
         return(moved_stuff)
 
@@ -272,17 +299,8 @@ class ClusterEnv:
         
         return(ng)
 
-    def getReward(self, choices):
-        taken = []
-
-        for i in choices:
-            taken.append(self.count + self.jobs_profile[i][0][-1])
-
-
-        return(taken)
-
-
-
+    
+"""
 '''
 testing
 '''
@@ -300,7 +318,9 @@ def show_plot(plot):
     plt.show()
 
 cd = os.getcwd()
-print(cd)
+
+
+(cd)
 
 def save_plot(plot, iteration, step, time, select):
     plt.matshow(plot, cmap=plt.get_cmap('gray_r'))
@@ -317,7 +337,7 @@ def save_plot(plot, iteration, step, time, select):
 
 
 #Running by n_iterations
-"""
+
 n_iterations = 30
 
 env = ClusterEnv(set_length=70)
@@ -336,7 +356,6 @@ for i in [*range(1,51,1)]:
     #print(t_step)
     #t_step = ClusterEnv.count()
     save_plot(newenv, iteration=2, step=i, time=t_step, select=choice)
-
 
 
 '''
@@ -367,28 +386,28 @@ for f in [*range(0,lf,1)]:
 imageio.mimsave(path+'iteration2.gif', images, duration=.5)
 
 print(choices)
-"""
+
 
 #Done by hand:
 
-# env = ClusterEnv(set_length=70)
+env = ClusterEnv(set_length=70)
 
-# grid = env.filled
-# save_plot(grid, 2, 0)
+grid = env.filled
+#save_plot(grid, 2, 0)
 
-# new = env.updateState(8, grid)
+new = env.updateState(8, grid)
 # save_plot(new, 2, 1)
 
-# new2 = env.updateState(2, new)
+new2 = env.updateState(2, new)
 # save_plot(new2, 2, 2)
 
-# new3 = env.updateState(0, new2)
+new3 = env.updateState(0, new2)
 # save_plot(new3, 2, 3)
 
-# new4 = env.updateState(3, new3)
+new4 = env.updateState(3, new3)
 # save_plot(new4, 2, 4)
 
-# new5 = env.updateState(4, new4)
+new5 = env.updateState(4, new4)
 # save_plot(new5, 2, 5)
 
 # new6 = env.updateState(9, new5)
@@ -421,5 +440,5 @@ print(choices)
 # new15 = env.updateState(0, new14)
 # save_plot(new15, 2, 15)
 
-
+"""
 
