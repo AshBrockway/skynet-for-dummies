@@ -9,9 +9,9 @@ time.
 
 from parameters import TuneMe as pa
 from job import JobGrabber
-# from DBconnect import DBconnect as db
-# from environment import ClusterEnv as Env
-# from Outline_of_DPN_training import DPN
+from DBconnect import DBconnect as db
+from environment import ClusterEnv as Env
+from Outline_of_DPN_training import DPN, DP_CNN
 from compare import compare_models as comp
 
 
