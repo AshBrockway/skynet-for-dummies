@@ -81,6 +81,7 @@ class DPN:  #ANN with Pytorch
             nn.Linear(32, self.n_outputs).cuda(),
             nn.Softmax())
         self.network.to(self.device)
+        self.time_move = False
 
     def predict(self, state):
 
@@ -161,10 +162,10 @@ class DPN:  #ANN with Pytorch
             picked_action = pa.sample() #returns index of the action/job selected.
             #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
             new_state = current_state_env.updateState( picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
-  
+
             reward = current_state_env.reward
-            
-            
+
+
             output_history.append( (current_state, picked_action, reward) )
 
             if cn > 50:
@@ -216,6 +217,29 @@ class DPN:  #ANN with Pytorch
         loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
         optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
 
+    def point_pred(self, current_state_env, duration):
+        current_state = current_state_env.filled
+        reward = []
+        sc = 0
+        old_c = -1
+        for i in range(duration):
+            if i > 0:
+                old_c = sc
+            probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
+            pa = torch.argmax(probs)
+            picked_action = pa.item()
+            new_state, cnt1, rew = current_state_env.updateState(picked_action, current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
+            sc = cnt1
+            print(sc)
+            print(rew)
+            if sc != old_c:
+                reward.append(rew)
+                self.time_move = True
+
+            current_state = new_state
+        avg_reward = sum(reward)/len(reward)
+
+        return(avg_reward)
 """
 dpn = DPN(CE(70))
 dpn.train(1)
@@ -252,6 +276,7 @@ class DP_CNN:  #CNN with Pytorch
             nn.Linear(8 * self.dims[0]*self.dims[1], self.n_outputs),
             nn.Softmax())
         self.network.to(self.device)
+        self.time_move = False
 
     # def forward(self, x):
     #     x = self.cnn_layers(x)
@@ -295,7 +320,9 @@ class DP_CNN:  #CNN with Pytorch
         while True:
             cn += 1
             current_state = current_state_env.filled
-            probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
+            state = current_state.flatten()
+            probs = self.network(torch.FloatTensor(state).to(self.device))
+            #probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
             pa = Categorical(probs)
             picked_action = pa.sample() #returns index of the action/job selected.
             #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
@@ -355,7 +382,25 @@ class DP_CNN:  #CNN with Pytorch
         loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
         optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
 
+    def point_pred(self, current_state_env, duration):
+        current_state = current_state_env.filled
+        reward = []
+        sc = current_state_env.count
+        old_c = -1
+        for i in range(duration):
+            probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
+            pa = Categorical(probs)
+            picked_action = pa.sample()
+            new_state = current_state_env.updateState(picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
 
+            if sc != old_c:
+                reward.append(current_state_env.reward)
+                self.time_move = True
+
+            old_c = sc
+        avg_reward = sum(reward)/len(reward)
+
+        return(avg_reward )
 
 #cnn training
 """
