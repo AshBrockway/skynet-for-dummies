@@ -17,7 +17,7 @@ import random
 import torch
 from torch.distributions import Categorical
 from torch import nn, optim
-from environment import ClusterEnv as CE 
+from environment import ClusterEnv as CE
 
 from parameters import TuneMe as pa
 
@@ -63,31 +63,31 @@ def curried_valuation(length_of_longest_trajectory):
 
 class DPN:  #ANN with Pytorch
     def __init__(self, enve):
-       
+
         self.n_inputs = len(enve.filled.flatten())
         #TODO: Make outputs reflexive
         self.n_outputs = 11
         self.env = enve
-        self.rewards = [] 
+        self.rewards = []
         # Define network
         if torch.cuda.is_available():
             self.device = torch.device("cuda:0")
             print("Running on the GPU")
-        else: 
+        else:
             self.device = torch.device("cpu")
             print("Running on the CPU")
 
         self.network = nn.Sequential(
-            nn.Linear(self.n_inputs, 128).cuda(),
+            nn.Linear(self.n_inputs, 128),
             nn.ReLU(),
             nn.Linear(128, 32),
             nn.ReLU(),
-            nn.Linear(32, self.n_outputs).cuda(), 
+            nn.Linear(32, self.n_outputs),
             nn.Softmax())
         self.network.to(self.device)
-        
+
     def predict(self, state):
-        
+
         state = state.flatten()
         action_probs = self.network(torch.FloatTensor(state).to(self.device))
         return action_probs
@@ -147,16 +147,16 @@ class DPN:  #ANN with Pytorch
         """
                                # key looks like (state, action) value is the probability? marked with optional1
     def train(self, ITERATIONS):
-        optimizer = optim.Adam(self.network.parameters(), lr=1e-3) 
-        cnt = 0 
+        optimizer = optim.Adam(self.network.parameters(), lr=1e-3)
+        cnt = 0
         for i in range(ITERATIONS):
-           
+
             cnt += 1
             self.train_on_jobs(optimizer)
-            
+
             print("Iteration " + str(i+1) + " Completed with reward: " + str(self.rewards[-1])) #+ " Variance of :" + str(self.variance[-1]))
-            
-            if cnt % 100 == 0: 
+
+            if cnt % 100 == 0:
                 location = "./"+str(i)+"_schds.pt"
                 torch.save(self.network.state_dict(), location)
 
@@ -169,7 +169,7 @@ class DPN:  #ANN with Pytorch
         Final output looks like:
         [(s_0, a_0, r_0), ..., (s_L, a_L, r_l)]
         '''
-        
+
         output_history = []
         cn = 0
         while True:
@@ -180,15 +180,15 @@ class DPN:  #ANN with Pytorch
             picked_action = pa.sample() #returns index of the action/job selected.
             #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
             new_state = current_state_env.updateState( picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
-            if len(current_state_env.rewards)==0: 
-                reward = 0 
-            else: 
-                reward = sum(current_state_env.rewards)/len(current_state_env.rewards)
-            
+            if len(current_state_env.rewards)==0:
+                reward = 0
+            else:
+                reward = sum([i**-1 for i in current_state_env.rewards])
+
             output_history.append( (current_state, picked_action, reward) )
-            
-            if cn > 50: 
-                break 
+
+            if cn > 50:
+                break
             if new_state is None: #essentially, you died or finished your trajectory
                 break
             else:
@@ -206,11 +206,11 @@ class DPN:  #ANN with Pytorch
         [1, 2, 3]
         ]
         '''
-        
+
         optimizer.zero_grad() #This sets the optimizer to update the weights by 0. We'll add to it over time! TODO: Check that it actually works
         for job_start in range(50):
             #episode_array is going to be an array of length N containing trajectories [(s_0, a_0, r_0), ..., (s_L, a_L, r_0)]
-            
+
             self.envi = CE(70)
             episode_array = [self.trajectory(self.envi) for x in range(EPISODES)]
             # Now we need to make the valuations
@@ -220,7 +220,7 @@ class DPN:  #ANN with Pytorch
             #can compute baselines without a loop?
             baseline_array = np.array([sum(cum_values[:,i])/EPISODES for i in range(longest_trajectory)]) #Probably defeats the purpose of numpy, but we're essentially trying to sum each valuation array together, and then divide by the number of episodes TODO make it work nicely
             self.rewards.append(baseline_array[0])
-            
+
             for i in range(EPISODES): #swapped two for loops
                 for t in range(50):
                     try:
@@ -237,8 +237,156 @@ class DPN:  #ANN with Pytorch
         loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
         optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
 
-"""
+'''
+#testing
+
 dpn = DPN(CE(70))
 
 dpn.train(1)
-"""
+
+'''
+
+
+class DP_CNN:  #CNN with Pytorch
+    def __init__(self, enve):
+        self.input = enve.filled
+        self.dims = self.input.shape
+        #TODO: Make outputs reflexive
+        self.n_outputs = 11
+        self.env = enve
+        self.rewards = []
+        # Define network
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda:0")
+            print("Running on the GPU")
+        else:
+            self.device = torch.device("cpu")
+            print("Running on the CPU")
+
+        self.network = nn.Sequential(
+            # Defining a 2D convolution layer
+            nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(4),
+            nn.ReLU(inplace=True),
+            # Defining another 2D convolution layer
+            nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(8),
+            nn.ReLU(inplace=True),
+            # Adding the final linear layer
+            nn.Flatten(),
+            nn.Linear(8 * self.dims[0]*self.dims[1], self.n_outputs),
+            nn.Softmax())
+        self.network.to(self.device)
+
+    # def forward(self, x):
+    #     x = self.cnn_layers(x)
+    #     x = x.view(x.size(0), -1)
+    #     x = self.linear_layers(x)
+    #     return x
+
+    # Defining the forward pass
+    def predict(self, state):
+        state = state.reshape(1,1,self.dims[0], self.dims[1])
+        action_probs = self.network(torch.tensor(state, dtype=torch.float).to(self.device))
+        return action_probs
+
+
+                               # key looks like (state, action) value is the probability? marked with optional1
+    def train(self, ITERATIONS):
+        optimizer = optim.Adam(self.network.parameters(), lr=1e-3)
+        cnt = 0
+        for i in range(ITERATIONS):
+
+            cnt += 1
+            self.train_on_jobs(optimizer)
+
+            print("Iteration " + str(i+1) + " Completed with reward: " + str(self.rewards[-1])) #+ " Variance of :" + str(self.variance[-1]))
+
+            if cnt % 100 == 0:
+                location = "./"+str(i)+"_schds.pt"
+                torch.save(self.network.state_dict(), location)
+
+
+
+    def trajectory(self, current_state_env):
+        '''
+        Maybe this implementation doesn't utilize GPUs very well, but I have no clue or not.
+
+        Final output looks like:
+        [(s_0, a_0, r_0), ..., (s_L, a_L, r_l)]
+        '''
+
+        output_history = []
+        cn = 0
+        while True:
+            cn += 1
+            current_state = current_state_env.filled
+            probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
+            pa = Categorical(probs)
+            picked_action = pa.sample() #returns index of the action/job selected.
+            #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
+            new_state = current_state_env.updateState( picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
+            if len(current_state_env.rewards)==0:
+                reward = 0
+            else:
+                reward = sum([i**-1 for i in current_state_env.rewards])
+
+            output_history.append( (current_state, picked_action, reward) )
+
+            if cn > 50:
+                break
+            if new_state is None: #essentially, you died or finished your trajectory
+                break
+            else:
+                current_state = new_state
+        return output_history
+
+    def train_on_jobs(self, optimizer):
+        '''
+        Training from a batch. Kinda presume the batch is a set of starting states not sure how you have the implemented states (do they include actions internally?)
+
+        example shape of episode_array
+        [
+        [1, 2, 3, 4, 5],
+        [1, 2, 3, 4, 5, 6, 7],
+        [1, 2, 3]
+        ]
+        '''
+
+        optimizer.zero_grad() #This sets the optimizer to update the weights by 0. We'll add to it over time! TODO: Check that it actually works
+        for job_start in range(50):
+            #episode_array is going to be an array of length N containing trajectories [(s_0, a_0, r_0), ..., (s_L, a_L, r_0)]
+
+            self.envi = CE(70)
+            episode_array = [self.trajectory(self.envi) for x in range(EPISODES)]
+            # Now we need to make the valuations
+            longest_trajectory = 50
+            valuation_fun = curried_valuation(longest_trajectory)
+            cum_values = np.array([valuation_fun(ep) for ep in episode_array]) #should be a EPISODESxlength sized
+            #can compute baselines without a loop?
+            baseline_array = np.array([sum(cum_values[:,i])/EPISODES for i in range(longest_trajectory)]) #Probably defeats the purpose of numpy, but we're essentially trying to sum each valuation array together, and then divide by the number of episodes TODO make it work nicely
+            self.rewards.append(baseline_array[0])
+
+            for i in range(EPISODES): #swapped two for loops
+                for t in range(50):
+                    try:
+                        state, action, reward = episode_array[i][t]
+                    except IndexError: #this occurs when the trajectory died
+                        break
+                    #get probabilities from the network. We already did this, but pretty sure we gotta do it again.
+                    probs = self.predict(state)
+                    DPN_Theta = Categorical(probs) #Pytorch distribution for Categorical classes. SHOULD connect to the network to update weights.
+                    if i == 0 and t == 0: #Define the first loss in the sum
+                        loss = -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action)
+                    else: #Keep adding to the loss
+                        loss += -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action) #This is what it _should_ look like in pytorch. Added negative (trying to maximize reward, but we're trying to find a minimum) on recommendation of pytorch documentation: https://pytorch.org/docs/stable/distributions.html
+        loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
+        optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
+
+
+'''
+cnn training
+dpn2 = DP_CNN(CE(70))
+
+dpn2.train(1)
+'''
