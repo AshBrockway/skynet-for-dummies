@@ -53,6 +53,7 @@ class ClusterEnv:
         self.real_backlog = fill
         self.taken = []
         self.cnt_sch = 0
+        
 
 
         for keys in self.que_keys:
@@ -63,6 +64,7 @@ class ClusterEnv:
         og = last_grid
         new_grid = last_grid
         stop = False
+        t_change = False 
 
         """
 
@@ -121,7 +123,7 @@ class ClusterEnv:
                     self.past_jobs[schedule_job[2][0]].append([old_start_col])
                     self.taken.append(tl)
 
-                    self.reward.append(0)
+                    #self.reward.append(0)
                     c = False
                     break
 
@@ -163,8 +165,9 @@ class ClusterEnv:
                 # erase past choices after time steps and rewards are finished
             self.choice_list = []
             self.real_choice_keys = []
+            t_change = True 
 
-        return(new_grid, self.count[-1] , self.reward[-1])
+        return(new_grid, t_change)
 
     def updateTime(self, new_grid2):
         for i in self.taken:
@@ -365,7 +368,7 @@ for i in [*range(1,51,1)]:
     choices.append(choice)
     #print(choice)
     oldenv = newenv
-    newenv, t_step = env.updateState(choice, oldenv)
+    newenv, t_step, rew = env.updateState(choice, oldenv)
     #print(t_step)
     #t_step = ClusterEnv.count()
     save_plot(newenv, iteration=2, step=i, time=t_step, select=choice)
@@ -399,10 +402,10 @@ for f in [*range(0,lf,1)]:
 imageio.mimsave(path+'iteration2.gif', images, duration=.5)
 
 print(choices)
-"""
+
 """
 #Done by hand:
-
+"""
 env = ClusterEnv(set_length=70)
 
 grid = env.filled
