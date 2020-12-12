@@ -47,7 +47,7 @@ def curried_valuation(length_of_longest_trajectory):
         out = np.zeros(len(episode))
         rews = [i[2] for i in episode] #rewards
         out[-1] = rews[-1]
-        for i in reversed(range(len(rews)-1)):
+        for i in reversed(range(0, len(rews)-1)):
             #go backwards
             out[i] = rews[i] + gamma*out[i+1] #this step valuation = reward + gamma*next_step_valuation
 
@@ -131,22 +131,25 @@ class DPN:  #ANN with Pytorch
                                # key looks like (state, action) value is the probability? marked with optional1
     def train(self, ITERATIONS):
         optimizer = optim.Adam(self.network.parameters(), lr=1e-3)
-        cnt = 0
+        self.cnt = 0
+        self.loss = 0
+        past_loss = {}
+        past_loc = {}
+
         for i in range(ITERATIONS):
 
-            cnt += 1
+            self.cnt += 1
             self.train_on_jobs(optimizer)
 
-            print("Iteration " + str(i+1) + " Completed with reward: " + str(self.rewards[-1])) #+ " Variance of :" + str(self.variance[-1]))
+            print("Iteration " + str(i+1) + " Completed with reward: " + str(self.rewards[-1]) + "Loss" + str(self.loss)) #+ " Variance of :" + str(self.variance[-1]))
 
-            if cnt % 100 == 0:
+
+
+            if self.cnt % 5 == 0:
                 location = "./"+str(i)+"_schds.pt"
-                torch.save({
-                    'ITERATION': i,
-                    'model_state_dict': self.network.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'Rewards': self.rewards[-1],
-                    }, location)
+                torch.save({'model': self.network.state_dict(), 'opt': optimizer.state_dict()}, location)
+                past_loss[i] = [self.loss]
+                past_loc[i] = [location]
 
 
     def trajectory(self, current_state_env):
@@ -163,12 +166,15 @@ class DPN:  #ANN with Pytorch
             current_state = current_state_env.filled
             probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
             pa = Categorical(probs)
-            picked_action = pa.sample() #returns index of the action/job selected.
+            if self.cnt % 30 == 0:
+                picked_action = probs.argmax()
+            else:
+                picked_action = pa.sample() #returns index of the action/job selected.
             #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
             new_state, t  = current_state_env.updateState( picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
-             
+
             reward = current_state_env.reward[-1]
-            
+
 
 
             output_history.append( (current_state, picked_action, reward) )
@@ -191,8 +197,8 @@ class DPN:  #ANN with Pytorch
         [1, 2, 3]
         ]
         '''
-
-        optimizer.zero_grad() #This sets the optimizer to update the weights by 0. We'll add to it over time! TODO: Check that it actually works
+        self.optimizer = optimizer
+        self.optimizer.zero_grad() #This sets the optimizer to update the weights by 0. We'll add to it over time! TODO: Check that it actually works
         for job_start in range(50):
             #episode_array is going to be an array of length N containing trajectories [(s_0, a_0, r_0), ..., (s_L, a_L, r_0)]
 
@@ -216,11 +222,11 @@ class DPN:  #ANN with Pytorch
                     probs = self.predict(state)
                     DPN_Theta = Categorical(probs) #Pytorch distribution for Categorical classes. SHOULD connect to the network to update weights.
                     if i == 0 and t == 0: #Define the first loss in the sum
-                        loss = -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action)
+                        self.loss = -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action)
                     else: #Keep adding to the loss
-                        loss += -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action) #This is what it _should_ look like in pytorch. Added negative (trying to maximize reward, but we're trying to find a minimum) on recommendation of pytorch documentation: https://pytorch.org/docs/stable/distributions.html
-        loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
-        optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
+                        self.loss += -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action) #This is what it _should_ look like in pytorch. Added negative (trying to maximize reward, but we're trying to find a minimum) on recommendation of pytorch documentation: https://pytorch.org/docs/stable/distributions.html
+        self.loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
+        self.optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
 
     def point_pred(self, current_state):
 
@@ -229,14 +235,12 @@ class DPN:  #ANN with Pytorch
         probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
         print(probs.tolist())
         pact = Categorical(probs)
-        picked_action = pact.sample()
+        picked_action = pact.argmax()
         act = picked_action.item()
 
         return(act)
-"""
-dpn = DPN(CE(70))
-dpn.train(1)
-"""
+
+
 
 
 class DP_CNN:  #CNN with Pytorch
@@ -326,9 +330,7 @@ class DP_CNN:  #CNN with Pytorch
             picked_action = pa.sample() #returns index of the action/job selected.
             #self.prob_history[(current_state, picked_action)] = choice_prob #optional1
             new_state, st, rew = current_state_env.updateState( picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
-            print("CHECKS")
-            print(st)
-            print(rew)
+
 
             reward = current_state_env.reward
 
@@ -378,9 +380,9 @@ class DP_CNN:  #CNN with Pytorch
                     probs = self.predict(state)
                     DPN_Theta = Categorical(probs) #Pytorch distribution for Categorical classes. SHOULD connect to the network to update weights.
                     if i == 0 and t == 0: #Define the first loss in the sum
-                        loss = -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action)
+                        loss = -(-cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action)
                     else: #Keep adding to the loss
-                        loss += -(cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action) #This is what it _should_ look like in pytorch. Added negative (trying to maximize reward, but we're trying to find a minimum) on recommendation of pytorch documentation: https://pytorch.org/docs/stable/distributions.html
+                        loss += -(-cum_values[i][t]-baseline_array[t])*ALPHA*DPN_Theta.log_prob(action) #This is what it _should_ look like in pytorch. Added negative (trying to maximize reward, but we're trying to find a minimum) on recommendation of pytorch documentation: https://pytorch.org/docs/stable/distributions.html
         loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
         optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
 
@@ -409,4 +411,3 @@ class DP_CNN:  #CNN with Pytorch
 #dpn2 = DP_CNN(CE(70))
 
 #dpn2.train(1)
-

@@ -46,14 +46,14 @@ class ClusterEnv:
         self.past_jobs = {}
         self.choice_list = []
         self.count  = [0]
-        self.reward = [0]
+        self.reward = [-70]
 
         self.real_choice_keys = []
         fill = self.objs_state.backlog_subset
         self.real_backlog = fill
         self.taken = []
         self.cnt_sch = 0
-        
+
 
 
         for keys in self.que_keys:
@@ -64,7 +64,7 @@ class ClusterEnv:
         og = last_grid
         new_grid = last_grid
         stop = False
-        t_change = False 
+        t_change = False
 
         """
 
@@ -165,7 +165,7 @@ class ClusterEnv:
                 # erase past choices after time steps and rewards are finished
             self.choice_list = []
             self.real_choice_keys = []
-            t_change = True 
+            t_change = True
 
         return(new_grid, t_change)
 
