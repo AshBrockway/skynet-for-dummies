@@ -64,7 +64,10 @@ class DPN:  #ANN with Pytorch
         #TODO: Make outputs reflexive
         self.n_outputs = 11
         self.env = enve
-        self.rewards = []
+
+        self.rewardsAVG = [] 
+        self.rewardsMAX = []
+
         # Define network
         if torch.cuda.is_available():
             self.device = torch.device("cuda:0")
@@ -72,7 +75,7 @@ class DPN:  #ANN with Pytorch
         else:
             self.device = torch.device("cpu")
             print("Running on the CPU")
-
+        
         self.network = nn.Sequential(
             nn.Linear(self.n_inputs, 128).cuda(),
             nn.ReLU(),
@@ -80,6 +83,8 @@ class DPN:  #ANN with Pytorch
             nn.ReLU(),
             nn.Linear(32, self.n_outputs).cuda(),
             nn.Softmax())
+        
+        #self.network = torch.load('284_schds.pt')
         self.network.to(self.device)
         self.time_move = False
 
@@ -130,6 +135,7 @@ class DPN:  #ANN with Pytorch
         """
                                # key looks like (state, action) value is the probability? marked with optional1
     def train(self, ITERATIONS):
+
         optimizer = optim.Adam(self.network.parameters(), lr=1e-3)
         self.cnt = 0
         self.loss = 0
@@ -139,11 +145,15 @@ class DPN:  #ANN with Pytorch
         for i in range(ITERATIONS):
 
             self.cnt += 1
+
             self.train_on_jobs(optimizer)
+            
+            print("Iteration " + str(i+1) + " Completed with avg reward: " + str(self.rewardsAVG[-1]))
+            
+            if cnt % 5 == 0: 
+
 
             print("Iteration " + str(i+1) + " Completed with reward: " + str(self.rewards[-1]) + "Loss" + str(self.loss)) #+ " Variance of :" + str(self.variance[-1]))
-
-
 
             if self.cnt % 5 == 0:
                 location = "./"+str(i)+"_schds.pt"
@@ -210,7 +220,9 @@ class DPN:  #ANN with Pytorch
             cum_values = np.array([valuation_fun(ep) for ep in episode_array])
             #can compute baselines without a loop?
             baseline_array = np.array([sum(cum_values[:,i])/EPISODES for i in range(longest_trajectory)]) #Probably defeats the purpose of numpy, but we're essentially trying to sum each valuation array together, and then divide by the number of episodes TODO make it work nicely
-            self.rewards.append(baseline_array[0])
+
+            #self.rewards.append(baseline_array[-1])
+            self.rewardsAVG.append(sum(baseline_array)/len(baseline_array))
 
             for i in range(EPISODES): #swapped two for loops
                 for t in range(50):
