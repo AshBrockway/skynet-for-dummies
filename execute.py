@@ -15,6 +15,10 @@ from environment import ClusterEnv as Env
 from Outline_of_DPN_training import DPN, DP_CNN
 from compare import compare_models as comp
 
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import numpy as np
+
 
 
 """
@@ -136,7 +140,7 @@ while comp_iterations >0:
     comp_iterations -= 1
 
 
-FIFO_CT_fin = sum(FIFO_CT)/len(FIFO_CT)
+FIFO_CT_fin = (sum(FIFO_CT)/len(FIFO_CT))
 SJF_CT_fin = sum(SJF_CT)/len(SJF_CT)
 Random_CT_fin = sum(Random_CT)/len(Random_CT)
 Packer_CT_fin = sum(Packer_CT)/len(Packer_CT)
@@ -154,26 +158,83 @@ SJF_slow_fin = sum(SJF_slow)/len(SJF_slow)
 Random_slow_fin = sum(Random_slow)/len(Random_slow)
 Packer_slow_fin = sum(Packer_slow)/len(Packer_slow)
 Tetris_slow_fin = sum(Tetris_slow)/len(Tetris_slow)
-print("\n")
-print(FIFO_slow_fin/n_jobs)
-print(SJF_slow_fin/n_jobs)
-print(Random_slow_fin/n_jobs)
-print(Packer_slow_fin/n_jobs)
-print(Tetris_slow_fin/n_jobs)
+
+# print("\n")
+# print(FIFO_slow_fin/n_jobs)
+# print(SJF_slow_fin/n_jobs)
+# print(Random_slow_fin/n_jobs)
+# print(Packer_slow_fin/n_jobs)
+# print(Tetris_slow_fin/n_jobs)
 
 
 
-#df needed only to double check things
-#df = comp_models.full_jobs_df
+
+#Begin Plotting of comparison models
+
+fifo_plt = np.asarray(FIFO_CT[:50])
+sjf_plt = np.asarray(SJF_CT[:50])
+random_plt = np.asarray(Random_CT[:50])
+packer_plt = np.asarray(Packer_CT[:50])
+tetris_plt = np.asarray(Tetris_CT[:50])
+
+
+fifo_plt_avg = np.full((50,1),(FIFO_CT_fin))
+sjf_plt_avg = np.full((50,1),(SJF_CT_fin))
+random_plt_avg = np.full((50,1),(Random_CT_fin))
+packer_plt_avg = np.full((50,1),(Packer_CT_fin))
+tetris_plt_avg = np.full((50,1),(Tetris_CT_fin))
 
 
 
-#Running the DPN
-# emptyGrid = pars.getGrid()
-# ggrid = pars.fill(job_data, emptyGrid)
+#begin plotting
+mpl.style.use('seaborn')
+fig, ax = plt.subplots()
+ax.plot(fifo_plt, 'C1:', label='First In, First Out')
+ax.plot(sjf_plt, 'C2:', label='Shortest Job First')
+ax.plot(random_plt, 'C3:', label='Random choice')
+ax.plot(packer_plt, 'C4:', label='Packer')
+ax.plot(tetris_plt, 'C5:', label='Tetris')
+
+plt.ylim((-43, -13))
+plt.xlabel('Iteration')
+plt.ylabel('Total Reward')
+
+box = ax.get_position()
+ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+legend = ax.legend(loc='center left', bbox_to_anchor=(1,.5))
+legend.get_frame().set_facecolor('C0')
+
+plt.savefig('comp_models')
+
+plt.close
 
 
-# ggrid2 = ggrid.flatten()
-# len(ggrid2)
+#plot averages
+fig, ax = plt.subplots()
+ax.plot(fifo_plt_avg, 'C1-', label='First In, First Out')
+ax.plot(sjf_plt_avg, 'C2-', label='Shortest Job First')
+ax.plot(random_plt_avg, 'C3-', label='Random choice')
+ax.plot(packer_plt_avg, 'C4-', label='Packer')
+ax.plot(tetris_plt_avg, 'C5-', label='Tetris')
+
+plt.ylim((-43, -13))
+plt.xlabel('Iteration')
+plt.ylabel('Total Reward')
+
+box = ax.get_position()
+ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+legend = ax.legend(loc='center left', bbox_to_anchor=(1,.5))
+legend.get_frame().set_facecolor('C0')
+
+plt.savefig('comp_models_avg.png')
+plt.show()
+
+
+
+
+
+
+
+
 
 
