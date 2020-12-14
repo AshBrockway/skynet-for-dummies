@@ -1,10 +1,6 @@
 """
 Author: Ashley Brockway, ashley.brockway15@ncf.edu
 Date: 9/30/20
-Purpose: ....
-- ClusterEnv object will be called in the main execution file to be fed into the alg. as the intitaial state space
-Overview of RL Parts:
-
     1. Observe the environment
     2. Choose action using strategy
     3. Act according to choice
@@ -140,7 +136,8 @@ class ClusterEnv:
                     for row in range(resource[1][0], resource[1][1]):
                         new_grid[row, old_start_col:old_start_col + len(schedule_job[1][1])] = schedule_job[1][1]
                         new_grid[row, sch_col2:sch_col2 + len(schedule_job[1][1])] = [0 for x in range(len(schedule_job[1][1]))]
-
+        else:
+            stop = True
 
 
         if stop:
@@ -187,7 +184,7 @@ class ClusterEnv:
 
 
 
-        if len(self.choice_list) > 0:
+        if len(self.choice_list) > 0 & len(self.real_backlog.keys()) > 0:
             c = 1
             pasti = 0
             for i in self.choice_list:
@@ -206,25 +203,27 @@ class ClusterEnv:
            """
 
         if len(self.real_backlog.keys()) <= 41 :
-            moved_grid[41 - self.cnt_sch + 1: 41, -1] = [0 for vali in range(42-self.cnt_sch, 41)]
+            try:
+                moved_grid[70 - self.cnt_sch:42 , -1] = np.array([0 for vali in range(70-self.cnt_sch-1, 43)])
+            except: ValueError
 
         return(moved_grid)
 
     def moveFromBack(self, tg, jc, cn):
         moved_stuff = tg
 
-
-
+        leys = [a for a in self.real_backlog.keys()]
+        newkey = leys[0]
         if jc !=0:
             self.cnt_sch += 1
 
             if jc==1:
-                newie = self.objs_state.backlog_subset[self.cnt_sch + 11]
-                nk = (len(self.past_jobs.keys()) + 10 + cn)
+                newie = self.objs_state.backlog_subset[newkey]
+
                 del self.objs_state.jobs_subset[jc]
 
                 self.objs_state.jobs_subset[jc] = newie
-                self.objs_state.jobs_subset[jc].append([nk])
+                self.objs_state.jobs_subset[jc].append([newkey])
 
 
 
@@ -243,18 +242,16 @@ class ClusterEnv:
 
             else:
 
-                newie = self.objs_state.backlog_subset[self.cnt_sch + 11]
+                newie = self.objs_state.backlog_subset[newkey]
 
 
-
-                nk = (len(self.past_jobs.keys()) + 10 + cn)
                 del self.objs_state.jobs_subset[jc]
 
 
                 self.objs_state.jobs_subset[jc] = newie
 
 
-                self.objs_state.jobs_subset[jc].append([nk])
+                self.objs_state.jobs_subset[jc].append([newkey])
 
 
                 empty_job_start_col = 13 + (int(self.objs_state.job_res_max) * (jc - 1)) + (jc - 1)
@@ -268,8 +265,7 @@ class ClusterEnv:
                     moved_stuff[r, empty_job_start_col:end_col_r1] = np.array(self.objs_state.jobs_subset[jc][1][0])
                     moved_stuff[22 + r, empty_job_start_col:end_col_r2] = np.array(self.objs_state.jobs_subset[jc][1][1])
 
-            del self.real_backlog[self.cnt_sch + 11]
-
+            del self.real_backlog[newkey]
 
         return(moved_stuff)
 
@@ -315,8 +311,8 @@ class ClusterEnv:
         return(ng)
 
 
-"""
 
+"""
 '''
 testing
 '''
@@ -363,12 +359,12 @@ save_plot(newenv, iteration=2, step=0, time=0, select=0)
 
 choices = []
 
-for i in [*range(1,51,1)]:
+for i in [*range(1,70,1)]:
     choice = rand.randint(0,10)
     choices.append(choice)
     #print(choice)
     oldenv = newenv
-    newenv, t_step, rew = env.updateState(choice, oldenv)
+    newenv, t_step = env.updateState(choice, oldenv)
     #print(t_step)
     #t_step = ClusterEnv.count()
     save_plot(newenv, iteration=2, step=i, time=t_step, select=choice)
