@@ -229,6 +229,7 @@ class DP_CNN:  #CNN with Pytorch
         #TODO: Make outputs reflexive
         self.n_outputs = 11
         self.env = enve
+        self.n_flatten = int(8*(int(self.dims[0]/4))*int((self.dims[1]/4)))
         self.rewards = []
         # Define network
         if torch.cuda.is_available():
@@ -243,13 +244,16 @@ class DP_CNN:  #CNN with Pytorch
             nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(4),
             nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
             # Defining another 2D convolution layer
             nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(8),
             nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
             # Adding the final linear layer
             nn.Flatten(),
-            nn.Linear(8 * self.dims[0]*self.dims[1], self.n_outputs),
+            nn.Linear(self.n_flatten, 128),
+            nn.Linear(128, self.n_outputs),
             nn.Softmax())
         self.network.to(self.device)
 
