@@ -1,10 +1,6 @@
 """
-WARNING:
-Code will not be executable from this alone. Must clean up the TODOs.
-Provides a backbone for the training method on a deep policy network.
-Presumably, the input to the network will be images as the current state (including current resource usage, and random M jobs to schedule).
-The output predictions are the probabilities for choosing to schedule one of the M jobs.
-Most important is the train_on_jobs method for updating the weights of the network, in accordance with DPN loss functions.
+The purpose of this file is to provide training code for DPN with ANN and CNN,
+either can be trained after the object is initialized with any environment. 
 """
 
 
@@ -18,14 +14,10 @@ from environment import ClusterEnv as CE
 from parameters import TuneMe as pa
 
 
-ITERATIONS = 1000 #kinda like epochs?
-BATCH_SIZE = 10   #Might be the exact same thing as episodes, up for interpretation.
-EPISODES = 20   #How many trajectories to explore for a given job. Essentually to get a better estimate of the expected reward.
-DISCOUNT = 0.99   #how much to discount the reward
-ALPHA = 0.01     #learning rate?
-
-#TODO: WHAT IS GAMMA??? (used in valuation function, line 56(ish))
-gamma = .75
+ITERATIONS = 1000 # number of iterations the model will run for (the number of times train_on_jobs method is used in train)
+EPISODES = 20   # How many trajectories to explore for a given job. Helps reduce variance in a reward calculation for a given jobset
+ALPHA = 0.01     # learning rate in batch parameter updates
+gamma = .99 # discount in cummulative reward
 
 def curried_valuation(length_of_longest_trajectory):
     '''
@@ -50,8 +42,6 @@ def curried_valuation(length_of_longest_trajectory):
         for i in reversed(range(0, len(rews)-1)):
             #go backwards
             out[i] = rews[i] + gamma*out[i+1] #this step valuation = reward + gamma*next_step_valuation
-
-        #assert x.ndim >= 1
         return out
     return valuation
 
@@ -67,6 +57,7 @@ class DPN:  #ANN with Pytorch
 
         self.rewardsAVG = []
         self.rewardsMAX = []
+
 
         # Define network
         if torch.cuda.is_available():
@@ -86,6 +77,7 @@ class DPN:  #ANN with Pytorch
 
         #self.network = torch.load('284_schds.pt')
         self.network.to(self.device)
+        self.optimizer = optim.Adam(self.network.parameters(), lr=1e-3)
 
     def predict(self, state):
 
@@ -97,55 +89,27 @@ class DPN:  #ANN with Pytorch
         all caps words are hyperparameters you would set.
         '''
 
-        """
-        params = pa()
-        # get number of jobs
-        self.jobs = params.getNumJobs()
-        print("Jobs = " + str(self.jobs))
-        input_features = np.array()
-        target_output = np.array()
-        target_output = target_output.reshape()
-        weigths = np.array()
-        bias = 0.3
-        lr = 0.05
-        def sigmoid(x):
-            return 1/(1+np.exp(-x))
-        def sigmoid_der(x):
-            return sigmoid(x)*(1-sigmoid(x))
-        for epoch in range(10000):
-            inputs = input_features
-            pred_in = np.dot(input, weights) + bias
-            pred_out = sigmoid(pred_in)
-            error = pred_out - target_output
-            x = error.sum()
-            print(x)
-            dcost_dpred = error
-            dpred_dx = sigmoid_der(pred_out)
-            z_delta = dcost_dpred * dpred_dx
-            inputs = inputs_features.T
-            weights -= lr * np.dot(inputs, z_delta)
-            for i in z_delta:
-                    bias -= lr * i
-        single_point = n.array()
-        result1 = np.dot(single_point, weights) + bias
-        result2 = sigmoid (result1)
-        print(result2)
-        self.prob_history = {} #Might be a dumb idea, but it stores the probability that the network chose the action given the state?
-        """
-                               # key looks like (state, action) value is the probability? marked with optional1
     def train(self, ITERATIONS):
+        model = self.network
+        opt = self.optimizer
+        check = torch.load('114_schds.pt')
 
-        optimizer = optim.Adam(self.network.parameters(), lr=1e-3)
+        model.load_state_dict(check['model'])
+        opt.load_state_dict(check['opt'])
+
+        self.network = model
+        self.optimizer = opt
+
         self.cnt = 0
-        for i in range(284, ITERATIONS):
+        for i in range(570,ITERATIONS):
             self.cnt += 1
-            self.train_on_jobs(optimizer)
+            self.train_on_jobs()
             print("Iteration " + str(i+1) + " Completed with avg reward: " + str(self.rewardsAVG[-1]), "  Loss:" + "   " +  str(self.loss))
 
-            if self.cnt % 5 == 0:
-                location = "./"+str(i)+"_schds.pt"
-                torch.save({'model': self.network.state_dict(), 'opt':optimizer.state_dict()}, location)
-                print(self.network[2].weight)
+            if self.cnt % 5 == 0 or i==570:
+                location = "./"+str(i+1)+"_schds.pt"
+                torch.save({'model': self.network.state_dict(), 'opt':self.optimizer.state_dict()}, location)
+                #print(self.network[4].weight)
 
 
 
@@ -159,28 +123,31 @@ class DPN:  #ANN with Pytorch
         output_history = []
         cn = 0
         while True:
-            cn += 1
+
             current_state = current_state_env.filled
             probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
             pa = Categorical(probs)
-            if self.cnt % 30 == 0:
-                picked_action = probs.argmax()
-            else:
-                picked_action = pa.sample() #returns index of the action/job selected.
+
+            picked_action = pa.sample() #returns index of the action/job selected.
             new_state, t  = current_state_env.updateState( picked_action.item(), current_state) #Get the reward and the new state that the action in the environment resulted in. None if action caused death. TODO build in environment
+            if t:
+                cn += 1
+                reward = current_state_env.reward[-1]
+                output_history.append( (current_state, picked_action, reward) )
 
-            reward = current_state_env.reward[-1]
-            output_history.append( (current_state, picked_action, reward) )
+                if cn > 50:
 
-            if cn > 50:
-                break
+                    break
+            else:
+                pass
             if new_state is None: #essentially, you died or finished your trajectory
                 break
             else:
                 current_state = new_state
+
         return output_history
 
-    def train_on_jobs(self, optimizer):
+    def train_on_jobs(self):
         '''
         Training from a batch. Kinda presume the batch is a set of starting states not sure how you have the implemented states (do they include actions internally?)
         example shape of episode_array
@@ -190,9 +157,9 @@ class DPN:  #ANN with Pytorch
         [1, 2, 3]
         ]
         '''
-        self.optimizer = optimizer
+
         self.optimizer.zero_grad() #This sets the optimizer to update the weights by 0. We'll add to it over time! TODO: Check that it actually works
-        for job_start in range(100):
+        for job_start in range(50):
             #episode_array is going to be an array of length N containing trajectories [(s_0, a_0, r_0), ..., (s_L, a_L, r_0)]
 
             self.envi = CE(70)
@@ -223,12 +190,14 @@ class DPN:  #ANN with Pytorch
         self.loss.backward() #Compute the total cumulated gradient thusfar through our big-ole sum of losses
         self.optimizer.step() #Actually update our network weights. The connection between loss and optimizer is "behind the scenes", but recall that it's dependent
 
-    def point_pred(self, current_state):
+    def point_pred(self, current_state, r):
         actionsss = []
         probs = self.predict(current_state)#could be self.predict()   TODO (by model building, or custom implementation). Basically define model architecture
-        print(probs.tolist())
-        pact = Categorical(probs)
-        picked_action = pact.argmax()
+        if r:
+            pa = Categorical(probs)
+            picked_action = pa.sample()
+        else:
+            picked_action = probs.argmax()
         act = picked_action.item()
 
         return(act)
@@ -241,6 +210,7 @@ class DP_CNN:  #CNN with Pytorch
         #TODO: Make outputs reflexive
         self.n_outputs = 11
         self.env = enve
+        self.n_flatten = int(8*(int(self.dims[0]/4))*int((self.dims[1]/4)))
         self.rewards = []
         # Define network
         if torch.cuda.is_available():
@@ -249,21 +219,24 @@ class DP_CNN:  #CNN with Pytorch
         else:
             self.device = torch.device("cpu")
             print("Running on the CPU")
-
         self.network = nn.Sequential(
             # Defining a 2D convolution layer
             nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(4),
             nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
             # Defining another 2D convolution layer
             nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(8),
             nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
             # Adding the final linear layer
             nn.Flatten(),
-            nn.Linear(8 * self.dims[0]*self.dims[1], self.n_outputs),
+            nn.Linear(self.n_flatten, 128),
+            nn.Linear(128, self.n_outputs),
             nn.Softmax())
         self.network.to(self.device)
+
 
     # def forward(self, x):
     #     x = self.cnn_layers(x)
