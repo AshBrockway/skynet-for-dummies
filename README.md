@@ -25,16 +25,18 @@ Run the execute.py file after ensuring the prerequisite packages have been insta
 
 ## Explanation of files:
 
-compare.py - code for the comparison heuristics
+compare.py - code for the comparison heuristics.
 
-DBconnect.py - code used to export model information to the database (only for use in the dashboard)
+DBconnect.py - code used to export model information to the database (only for use in the dashboard)  Note: to use, you must adjust code with connection parameters for your machine.
 
 enviornment.py - code simulating and updating environment.  Connected with DPN, this consists of the training loop.
 
-execute.py - file used to run entire model
+execute.py - file used to run entire model, developed for when an optimal policy is trained to, not fully functioning.
 
-job.py - code to randomly generate jobs and jobsets based on parameters within parameters.py
+test.ipynb - main file used for execution, produces test plots.  Must put test file in same director as weights.  For optimal performance, make sure you are using a machine with a GPU.
 
-Outline_of_DPN_training.py - code containing DPN information for both ANN and CNN models
+job.py - code to randomly generate jobs and jobsets based on parameters within parameters.py.
 
-parameters.py - code contains model parameters as well as fills initial grid for the enviornment
+Outline_of_DPN_training.py - code containing DPN information for both ANN and CNN models.
+
+parameters.py - code contains model parameters as well as fills initial grid for the enviornment.
