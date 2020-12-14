@@ -1,0 +1,136 @@
+## Current Grafana dashboard queries
+##author: Jamie Hobbs, jamie.hobbs19@ncf.edu
+
+##These queries need to be applied inside the Grafana 
+##dashboard, this file will not instantiate a dashboard.
+
+#Number of available resources
+SELECT
+  resources AS "time",
+  resources
+FROM skynet_params
+ORDER BY 1
+
+#Percentage of long & short jobs
+SELECT
+  long AS "time",
+  long
+FROM skynet_params
+ORDER BY 1
+
+SELECT
+  short AS "time",
+  short
+FROM skynet_params
+ORDER BY 1
+
+
+#System Capacity
+SELECT
+  syscap AS "time",
+  syscap
+FROM skynet_params
+ORDER BY 1
+
+
+#Time Range
+SELECT
+  timelow AS "time",
+  timelow
+FROM skynet_params
+ORDER BY 1
+
+SELECT
+  timehigh AS "time",
+  timehigh
+FROM skynet_params
+ORDER BY 1
+
+
+#Resource Usage Range
+SELECT
+  resourceuselow AS "time",
+  resourceuselow
+FROM skynet_params
+ORDER BY 1
+
+SELECT
+  resourceusehigh AS "time",
+  resourceusehigh
+FROM skynet_params
+ORDER BY 1
+
+#Panel JSON - used to display gif from a hosted location
+#update content with location of desired gif. 
+{
+  "fieldConfig": {
+    "defaults": {
+      "custom": {
+        "align": null,
+        "filterable": false
+      },
+      "mappings": [],
+      "thresholds": {
+        "mode": "absolute",
+        "steps": [
+          {
+            "color": "green",
+            "value": null
+          },
+          {
+            "color": "red",
+            "value": 80
+          }
+        ]
+      }
+    },
+    "overrides": []
+  },
+  "gridPos": {
+    "h": 10,
+    "w": 13,
+    "x": 5,
+    "y": 4
+  },
+  "id": 12,
+  "options": {
+    "mode": "html",
+    "content": "<a href=\"https://ibb.co/NjWkR7h\"><img 
+	src=\"https://i.ibb.co/BZT7kwD/iteration2.gif\" alt=\"iteration2\" border=\"0\"></a>"
+  },
+  "pluginVersion": "7.3.3",
+  "targets": [
+    {
+      "format": "time_series",
+      "group": [],
+      "metricColumn": "none",
+      "rawQuery": false,
+      "rawSql": "SELECT\n  $__time(time_column),\n  value1\nFROM\n  metric_table\nWHERE\n  $__timeFilter(time_column)\n",
+      "refId": "A",
+      "select": [
+        [
+          {
+            "params": [
+              "value"
+            ],
+            "type": "column"
+          }
+        ]
+      ],
+      "timeColumn": "time",
+      "where": [
+        {
+          "name": "$__timeFilter",
+          "params": [],
+          "type": "macro"
+        }
+      ]
+    }
+  ],
+  "timeFrom": null,
+  "timeShift": null,
+  "title": "Environment State",
+  "transparent": true,
+  "type": "text",
+  "datasource": null
+}
