@@ -1,10 +1,6 @@
 """
 Author: Ashley Brockway, ashley.brockway15@ncf.edu
 Date: 9/30/20
-Purpose: ....
-- ClusterEnv object will be called in the main execution file to be fed into the alg. as the intitaial state space
-Overview of RL Parts:
-
     1. Observe the environment
     2. Choose action using strategy
     3. Act according to choice

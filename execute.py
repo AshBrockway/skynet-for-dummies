@@ -17,6 +17,17 @@ from compare import compare_models as comp
 
 
 
+from Outline_of_DPN_training import DPN
+from environment import ClusterEnv
+
+intera_num = 1000
+
+start = ClusterEnv(70)
+dpn = DPN(start)
+
+dpn.train(itera_num)
+
+
 """
 Steps:
     1. set model parameters using 'TuneMe' class in parameters.py and tuning.py
@@ -36,12 +47,6 @@ Steps:
     6. process final stats for model - total slowdown or total time to completion
     7. output final stats to database
 
-Further considerations:
-    1. Do we want the alternative models to run concurrently with DPN model, or separately? If concurrently, will impact
-    performance.
-        and if separately, we will need some way to save jobs to use again.
-    2. Comparison models will not take the image that the DPN will use, so we will need to figure out how to directly import jobs/env to these models
-
 
 DBconnect LIST FORMATS:
 
@@ -51,7 +56,7 @@ INTERMEDIATE LOSSES must be in list form: [DPN_loss, DPCNN_loss, AC_loss, FIFO_l
 
 """
 
-
+"""
 
 def main():
     #set new parameters here
@@ -81,7 +86,7 @@ def main():
         pass
 
 
-
+"""
 
 
 '''
@@ -115,4 +120,3 @@ print(comp_models.Tetris_loss)
 # ggrid2 = ggrid.flatten()
 # len(ggrid2)
 '''
-
