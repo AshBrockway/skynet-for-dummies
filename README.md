@@ -33,7 +33,7 @@ enviornment.py - code simulating and updating environment.  Connected with DPN, 
 
 execute.py - file used to run entire model, developed for when an optimal policy is trained to, not fully functioning.
 
-Test.ipynb - main file used for execution, also produces test plots.
+Test.ipynb - main file used for execution, also produces test plots. NOTE: when you preview this file, it includes the last saved output it ran with.  Also be sure to run this using a GPU connection, as noted in the 'Usage' section
 
 job.py - code to randomly generate jobs and jobsets based on parameters within parameters.py.
 
