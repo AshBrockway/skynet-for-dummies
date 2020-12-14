@@ -20,7 +20,7 @@ grafana (for dashboard)
 
 ## Usage:
 
-Run the execute.py file after ensuring the prerequisite packages have been installed on your machine.
+Run the test.ipynb file after ensuring the prerequisite packages have been installed on your machine.  Must put test file in same directory as the weights.  For optimal performance, run on a machine using a GPU (otherwise it will take a long time)
 
 
 ## Explanation of files:
@@ -33,7 +33,7 @@ enviornment.py - code simulating and updating environment.  Connected with DPN, 
 
 execute.py - file used to run entire model, developed for when an optimal policy is trained to, not fully functioning.
 
-test.ipynb - main file used for execution, produces test plots.  Must put test file in same director as weights.  For optimal performance, make sure you are using a machine with a GPU.
+test.ipynb - main file used for execution, also produces test plots.
 
 job.py - code to randomly generate jobs and jobsets based on parameters within parameters.py.
 
